@@ -328,7 +328,7 @@ function AddExpenseSheet({ initial, tripStartDate, members, onSave, onClose }) {
     set('isPreTrip', d < tripStartDate)
   }
 
-  const canSave = Number(form.amount) > 0 && form.description.trim() && form.splitBetween.length > 0
+  const canSave = Number(form.amount) > 0 && form.description.trim() && (members.length === 0 || form.splitBetween.length > 0)
 
   return (
     <>

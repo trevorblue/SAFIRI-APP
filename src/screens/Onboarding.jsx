@@ -7,6 +7,12 @@ import { BackIcon, ForwardIcon, MapPinIcon, CalendarIcon, WalletIcon, TrainIcon,
 
 const STEPS = 3
 
+const CAR_TYPES = [
+  { id: 'sedan', label: 'Sedan',   icon: '🚗', capacity: 4  },
+  { id: 'suv',   label: 'SUV',     icon: '🚙', capacity: 7  },
+  { id: 'van',   label: 'Van',     icon: '🚐', capacity: 14 },
+]
+
 const slideVariants = {
   enter: dir => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
   center: { x: 0, opacity: 1 },
@@ -31,6 +37,9 @@ export default function Onboarding() {
     transportMode: DEFAULT_TRIP.transportMode,
     sgrCostPerPerson: DEFAULT_TRIP.sgrCostPerPerson ?? 1000,
     carTotalCost: DEFAULT_TRIP.carTotalCost ?? 0,
+    carType: 'sedan',
+    carDailyRate: '',
+    rentalDays: '',
     groupSize: 4,
     memberNames: ['', '', '', ''],
     budgetMode: 'perPerson',
@@ -60,6 +69,16 @@ export default function Onboarding() {
     const perPerson = form.budgetMode === 'total'
       ? Math.round(Number(form.budgetPerPerson) / form.groupSize)
       : Number(form.budgetPerPerson)
+
+    // Compute car total from type + daily rate + rental days
+    let carTotalCost = Number(form.carTotalCost) || 0
+    if (form.transportMode === 'car' && Number(form.carDailyRate) > 0) {
+      const carType   = CAR_TYPES.find(t => t.id === form.carType) ?? CAR_TYPES[0]
+      const carsNeeded = Math.ceil(form.groupSize / carType.capacity)
+      const days       = Number(form.rentalDays) || tripDays
+      carTotalCost     = carsNeeded * Number(form.carDailyRate) * days
+    }
+
     dispatch({
       type: 'COMPLETE_SETUP',
       payload: {
@@ -67,6 +86,7 @@ export default function Onboarding() {
         budgetPerPerson: perPerson,
         groupSize: form.groupSize,
         monthlyBudget: form.monthlyBudget ? Number(form.monthlyBudget) : null,
+        carTotalCost,
       },
     })
   }
@@ -525,25 +545,87 @@ function Step3({ form, set, tripDays, _dailyBudget, groupSize }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                className="space-y-2"
+                className="space-y-3"
               >
-                <Field
-                  label="Car rental total (KES)"
-                  icon={<CarIcon size={14} stroke="var(--color-primary)" />}
-                  hint="Shared equally among the group"
-                >
-                  <input
-                    type="number"
-                    value={form.carTotalCost}
-                    onChange={e => set('carTotalCost', e.target.value)}
-                    placeholder="e.g. 15000"
-                    className="input-field"
-                    inputMode="numeric"
-                  />
-                </Field>
-                {Number(form.carTotalCost) > 0 && form.groupSize > 0 && (
-                  <Chip label="Per person" value={formatKES(Math.round(Number(form.carTotalCost) / form.groupSize))} accent />
-                )}
+                {/* Car type picker */}
+                <div>
+                  <label className="text-[var(--color-muted-2)] text-xs font-medium uppercase tracking-wide mb-2 block">
+                    Vehicle type
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {CAR_TYPES.map(ct => {
+                      const carsNeeded = Math.ceil(form.groupSize / ct.capacity)
+                      const isActive   = form.carType === ct.id
+                      return (
+                        <motion.button
+                          key={ct.id}
+                          onClick={() => set('carType', ct.id)}
+                          className={`flex flex-col items-center gap-1 py-3 rounded-2xl border text-center ${
+                            isActive
+                              ? 'bg-[var(--color-primary-dim)] border-[color:var(--color-primary)]/40'
+                              : 'bg-[var(--color-surface)] border-[var(--color-border)]'
+                          }`}
+                          whileTap={{ scale: 0.92 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                        >
+                          <span className="text-xl">{ct.icon}</span>
+                          <span className={`text-xs font-semibold ${isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text)]'}`}>
+                            {ct.label}
+                          </span>
+                          <span className={`text-[9px] ${isActive ? 'text-[var(--color-primary)]/70' : 'text-[var(--color-muted)]'}`}>
+                            {ct.capacity} seats · {carsNeeded} needed
+                          </span>
+                        </motion.button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Daily rate + days */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Field
+                    label="Daily rate (KES)"
+                    icon={<CarIcon size={14} stroke="var(--color-primary)" />}
+                  >
+                    <input
+                      type="number"
+                      value={form.carDailyRate}
+                      onChange={e => set('carDailyRate', e.target.value)}
+                      placeholder="e.g. 5000"
+                      className="input-field text-sm"
+                      inputMode="numeric"
+                    />
+                  </Field>
+                  <Field label="Rental days">
+                    <input
+                      type="number"
+                      value={form.rentalDays}
+                      onChange={e => set('rentalDays', e.target.value)}
+                      placeholder={`${tripDays || 1}`}
+                      className="input-field text-sm"
+                      inputMode="numeric"
+                      min="1"
+                    />
+                  </Field>
+                </div>
+
+                {/* Live calculation */}
+                {Number(form.carDailyRate) > 0 && (() => {
+                  const ct          = CAR_TYPES.find(t => t.id === form.carType) ?? CAR_TYPES[0]
+                  const carsNeeded  = Math.ceil(form.groupSize / ct.capacity)
+                  const days        = Number(form.rentalDays) || tripDays || 1
+                  const total       = carsNeeded * Number(form.carDailyRate) * days
+                  return (
+                    <motion.div
+                      className="flex gap-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <Chip label={`${carsNeeded} car${carsNeeded > 1 ? 's' : ''} × ${days}d`} value={formatKES(total)} />
+                      <Chip label="Per person" value={formatKES(Math.round(total / form.groupSize))} accent />
+                    </motion.div>
+                  )
+                })()}
               </motion.div>
             )}
           </AnimatePresence>

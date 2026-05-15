@@ -68,8 +68,7 @@ export default function Layout() {
                 <motion.button
                   key="fab"
                   onClick={() => {
-                    if (location.pathname === '/members') navigate('/members?add=true')
-                    else navigate('/expenses')
+                    navigate('/expenses')
                   }}
                   className="flex flex-col items-center gap-1 -mt-5"
                   whileTap={{ scale: 0.88 }}
