@@ -88,6 +88,7 @@ function reducer(state, action) {
       return { ...state, setupComplete: false }
 
     // Replace local state with data loaded from Supabase (keeps itinerary/checklist/docs from localStorage)
+    // Keep local members if DB returns none — protects against failed member inserts during migration
     case 'LOAD_FROM_DB':
       return {
         ...state,
@@ -98,7 +99,7 @@ function reducer(state, action) {
         cashFloat:     action.payload.cashFloat,
         categoryCaps:  action.payload.categoryCaps,
         trip:          action.payload.trip,
-        members:       action.payload.members,
+        members:       action.payload.members.length > 0 ? action.payload.members : state.members,
         expenses:      action.payload.expenses,
       }
 

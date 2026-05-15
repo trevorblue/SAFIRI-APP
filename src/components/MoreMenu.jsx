@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SetupIcon, MembersIcon, SettleIcon, ChecklistIcon, VaultIcon, CloseIcon, ShareIcon } from './icons'
+import { SetupIcon, MembersIcon, SettleIcon, ChecklistIcon, VaultIcon, CloseIcon, ShareIcon, HomeIcon, LogOutIcon } from './icons'
 import { useTrip } from '../context/TripContext'
+import { useAuth } from '../context/AuthContext'
 import { encodeSharePayload } from '../screens/ShareView'
 
 const items = [
@@ -21,9 +22,10 @@ const itemVariants = {
   }),
 }
 
-export default function MoreMenu({ onClose }) {
+export default function MoreMenu({ onClose, onExitTrip }) {
   const navigate  = useNavigate()
   const { state, computed } = useTrip()
+  const { user, signOut } = useAuth()
   const [copied, setCopied] = useState(false)
 
   function go(to) {
@@ -74,6 +76,30 @@ export default function MoreMenu({ onClose }) {
           </motion.button>
         </div>
         <div className="py-2">
+          {/* My Trips — return to home screen */}
+          {onExitTrip && (
+            <>
+              <motion.button
+                custom={-1}
+                variants={itemVariants}
+                initial="hidden"
+                animate="visible"
+                onClick={() => { onClose(); onExitTrip() }}
+                className="w-full flex items-center gap-4 px-5 py-3.5 text-left"
+                whileTap={{ backgroundColor: 'var(--color-surface-2)', scale: 0.99 }}
+              >
+                <span className="text-[var(--color-muted)]">
+                  <HomeIcon size={20} stroke="currentColor" />
+                </span>
+                <div>
+                  <div className="text-[var(--color-text)] text-sm font-medium">My Trips</div>
+                  <div className="text-[var(--color-muted)] text-xs">Switch or plan a new trip</div>
+                </div>
+              </motion.button>
+              <div className="mx-5 my-1 border-t border-[var(--color-border)]" />
+            </>
+          )}
+
           {items.map(({ to, Icon, label, desc }, i) => (
             <motion.button
               key={to}
@@ -128,6 +154,23 @@ export default function MoreMenu({ onClose }) {
               )}
             </AnimatePresence>
           </motion.button>
+
+          {/* Account section */}
+          <div className="mx-5 my-2 border-t border-[var(--color-border)]" />
+          <div className="px-5 py-2 flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold mb-0.5">Account</p>
+              <p className="text-[var(--color-text)] text-xs truncate max-w-[200px]">{user?.email}</p>
+            </div>
+            <motion.button
+              onClick={async () => { onClose(); await signOut() }}
+              className="shrink-0 flex items-center gap-1.5 text-[var(--color-danger)] text-xs font-medium border border-[var(--color-danger)]/30 rounded-full px-3 py-1.5"
+              whileTap={{ scale: 0.94 }}
+            >
+              <LogOutIcon size={14} stroke="currentColor" />
+              Sign out
+            </motion.button>
+          </div>
         </div>
       </motion.div>
     </>

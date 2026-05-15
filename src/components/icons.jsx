@@ -288,3 +288,22 @@ export function CloseIcon({ size = 20, stroke = 'currentColor', ...p }) {
     </svg>
   )
 }
+
+export function HomeIcon({ size = 20, stroke = 'currentColor', ...p }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" stroke={stroke} {...base} {...p}>
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" strokeWidth="1.8" />
+      <polyline points="9 22 9 12 15 12 15 22" strokeWidth="1.8" />
+    </svg>
+  )
+}
+
+export function LogOutIcon({ size = 20, stroke = 'currentColor', ...p }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" stroke={stroke} {...base} {...p}>
+      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" strokeWidth="1.8" />
+      <polyline points="16 17 21 12 16 7" strokeWidth="1.8" />
+      <line x1="21" y1="12" x2="9" y2="12" strokeWidth="1.8" />
+    </svg>
+  )
+}

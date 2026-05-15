@@ -25,11 +25,11 @@ if (new URLSearchParams(window.location.search).get('seed') === '1') {
   seedDemoData()
 }
 
-function AppRoutes() {
+function AppRoutes({ onExitTrip }) {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Layout />}>
+        <Route element={<Layout onExitTrip={onExitTrip} />}>
           <Route index element={<Dashboard />} />
           <Route path="itinerary" element={<Itinerary />} />
           <Route path="expenses" element={<ExpenseLog />} />
@@ -77,7 +77,7 @@ function AppShell() {
       ) : view === 'onboarding' ? (
         <Onboarding key="onboarding" />
       ) : view === 'trip' && state.setupComplete ? (
-        <AppRoutes key="app" />
+        <AppRoutes key="app" onExitTrip={() => setView('home')} />
       ) : (
         <Home
           key="home"

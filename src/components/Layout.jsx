@@ -13,7 +13,7 @@ const TABS = [
   { to: '/afford', Icon: AffordIcon, label: 'Afford?' },
 ]
 
-export default function Layout() {
+export default function Layout({ onExitTrip }) {
   const { computed } = useTrip()
   const [showMore, setShowMore] = useState(false)
   const navigate = useNavigate()
@@ -137,7 +137,7 @@ export default function Layout() {
       </nav>
 
       <AnimatePresence>
-        {showMore && <MoreMenu onClose={() => setShowMore(false)} />}
+        {showMore && <MoreMenu onClose={() => setShowMore(false)} onExitTrip={onExitTrip} />}
       </AnimatePresence>
     </div>
   )
