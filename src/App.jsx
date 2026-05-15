@@ -1,14 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { TripProvider, useTrip } from './context/TripContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { seedDemoData } from './lib/demoSeed'
 import Splash from './screens/Splash'
-
-// Visiting /?seed=1 loads demo data and reloads the app — works from any state
-if (new URLSearchParams(window.location.search).get('seed') === '1') {
-  seedDemoData()
-}
+import Login from './screens/Login'
+import Home from './screens/Home'
 import Onboarding from './screens/Onboarding'
 import Layout from './components/Layout'
 import Dashboard from './screens/Dashboard'
@@ -21,6 +19,11 @@ import SettleUp from './screens/SettleUp'
 import Checklist from './screens/Checklist'
 import DocumentVault from './screens/DocumentVault'
 import ShareView from './screens/ShareView'
+
+// Visiting /?seed=1 loads demo data and reloads the app — works from any state
+if (new URLSearchParams(window.location.search).get('seed') === '1') {
+  seedDemoData()
+}
 
 function AppRoutes() {
   return (
@@ -47,16 +50,40 @@ function AppRoutes() {
 
 function AppShell() {
   const [splashDone, setSplashDone] = useState(false)
+  // 'home' | 'onboarding' | 'trip'
+  const [view, setView] = useState('home')
+  const { session } = useAuth()
   const { state } = useTrip()
+
+  // After onboarding completes, return to Home so the new trip card is visible
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (state.setupComplete && view === 'onboarding') setView('home')
+  }, [state.setupComplete, view])
+
+  // Reset to home on sign-out so the next sign-in starts fresh
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (session === null) setView('home')
+  }, [session])
 
   return (
     <AnimatePresence mode="wait">
-      {!splashDone ? (
+      {/* Keep splash visible until animation ends AND auth has resolved */}
+      {(!splashDone || session === undefined) ? (
         <Splash key="splash" onDone={() => setSplashDone(true)} />
-      ) : !state.setupComplete ? (
+      ) : session === null ? (
+        <Login key="login" />
+      ) : view === 'onboarding' ? (
         <Onboarding key="onboarding" />
-      ) : (
+      ) : view === 'trip' && state.setupComplete ? (
         <AppRoutes key="app" />
+      ) : (
+        <Home
+          key="home"
+          onEnterTrip={() => setView('trip')}
+          onCreateTrip={() => setView('onboarding')}
+        />
       )}
     </AnimatePresence>
   )
@@ -64,8 +91,10 @@ function AppShell() {
 
 export default function App() {
   return (
-    <TripProvider>
-      <AppShell />
-    </TripProvider>
+    <AuthProvider>
+      <TripProvider>
+        <AppShell />
+      </TripProvider>
+    </AuthProvider>
   )
 }
