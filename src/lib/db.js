@@ -1,0 +1,195 @@
+import { supabase } from './supabase'
+
+// ── Shape converters ────────────────────────────────────────────────────────
+
+export function expToLocal(e) {
+  return {
+    id:            e.id,
+    description:   e.description,
+    amount:        Number(e.amount),
+    category:      e.category,
+    date:          e.date,
+    paidBy:        e.paid_by ?? null,
+    splitBetween:  e.split_between ?? [],
+    isPreTrip:     e.is_pre_trip,
+    paymentMethod: e.payment_method ?? null,
+    status:        e.status ?? 'approved',
+    createdAt:     e.created_at,
+  }
+}
+
+export function memberToLocal(m) {
+  return {
+    id:       m.id,
+    name:     m.name,
+    status:   m.confirmed ? 'confirmed' : 'invited',
+    budget:   m.budget != null ? Number(m.budget) : null,
+    role:     m.role,
+    joinedAt: m.created_at,
+  }
+}
+
+// ── Queries ─────────────────────────────────────────────────────────────────
+
+// Load the most recent active trip owned by userId → local state shape, or null
+export async function loadUserTrip(userId) {
+  if (!supabase) return null
+
+  const { data: trip, error } = await supabase
+    .from('trips')
+    .select('*')
+    .eq('owner_id', userId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !trip) return null
+
+  const [{ data: members }, { data: expenses }] = await Promise.all([
+    supabase.from('trip_members').select('*').eq('trip_id', trip.id).order('created_at'),
+    supabase.from('expenses').select('*').eq('trip_id', trip.id).order('created_at', { ascending: false }),
+  ])
+
+  const s = trip.settings ?? {}
+  return {
+    tripDbId:      trip.id,
+    setupComplete: true,
+    groupSize:     s.groupSize ?? 1,
+    monthlyBudget: s.monthlyBudget ?? null,
+    cashFloat:     Number(s.cashFloat ?? 0),
+    categoryCaps:  s.categoryCaps ?? { drinks: 5000 },
+    trip: {
+      name:             trip.name,
+      destination:      s.destination ?? '',
+      startDate:        trip.start_date,
+      endDate:          trip.end_date,
+      budgetPerPerson:  Number(trip.budget_per_person),
+      transportMode:    s.transportMode  ?? 'car',
+      sgrCostPerPerson: Number(s.sgrCostPerPerson ?? 0),
+      carTotalCost:     Number(s.carTotalCost  ?? 0),
+      carType:          s.carType ?? 'sedan',
+    },
+    members:  (members  ?? []).map(memberToLocal),
+    expenses: (expenses ?? []).map(expToLocal),
+  }
+}
+
+// Insert a new trip + its confirmed members → return the Supabase trip UUID
+export async function createTrip(userId, state) {
+  if (!supabase) return null
+
+  const { trip, members, groupSize, monthlyBudget, cashFloat, categoryCaps } = state
+
+  const { data, error } = await supabase
+    .from('trips')
+    .insert({
+      owner_id:         userId,
+      name:             trip.name,
+      start_date:       trip.startDate,
+      end_date:         trip.endDate,
+      budget_per_person: trip.budgetPerPerson,
+      settings: {
+        destination:      trip.destination,
+        transportMode:    trip.transportMode,
+        sgrCostPerPerson: trip.sgrCostPerPerson,
+        carTotalCost:     trip.carTotalCost,
+        carType:          trip.carType,
+        groupSize:        groupSize   ?? 1,
+        monthlyBudget:    monthlyBudget ?? null,
+        cashFloat:        cashFloat   ?? 0,
+        categoryCaps:     categoryCaps ?? {},
+      },
+    })
+    .select('id')
+    .single()
+
+  if (error) { console.error('createTrip:', error); return null }
+
+  const tripId = data.id
+  const confirmed = (members ?? []).filter(m => m.status === 'confirmed')
+
+  if (confirmed.length > 0) {
+    // Let Supabase generate member UUIDs — we reload after to get them
+    const { error: mErr } = await supabase.from('trip_members').insert(
+      confirmed.map(m => ({
+        trip_id:   tripId,
+        name:      m.name,
+        confirmed: true,
+        budget:    m.budget ?? null,
+        role:      'member',
+      }))
+    )
+    if (mErr) console.error('createTrip members:', mErr)
+  }
+
+  return tripId
+}
+
+// ── Per-action sync (fire-and-forget) ───────────────────────────────────────
+
+export async function syncExpenseAction(action, tripId) {
+  if (!supabase || !tripId) return
+  const { type, payload } = action
+
+  if (type === 'ADD_EXPENSE') {
+    const { error } = await supabase.from('expenses').insert({
+      id:             payload.id,
+      trip_id:        tripId,
+      description:    payload.description,
+      amount:         payload.amount,
+      category:       payload.category,
+      date:           payload.date,
+      paid_by:        payload.paidBy        ?? null,
+      split_between:  payload.splitBetween  ?? [],
+      is_pre_trip:    payload.isPreTrip      ?? false,
+      payment_method: payload.paymentMethod ?? null,
+      status:         payload.status        ?? 'approved',
+    })
+    if (error) console.error('syncExpense INSERT:', error)
+  } else if (type === 'UPDATE_EXPENSE') {
+    const { id, ...rest } = payload
+    const { error } = await supabase.from('expenses').update({
+      description:   rest.description,
+      amount:        rest.amount,
+      category:      rest.category,
+      date:          rest.date,
+      paid_by:       rest.paidBy       ?? null,
+      split_between: rest.splitBetween ?? [],
+      is_pre_trip:   rest.isPreTrip    ?? false,
+      status:        rest.status,
+    }).eq('id', id)
+    if (error) console.error('syncExpense UPDATE:', error)
+  } else if (type === 'DELETE_EXPENSE') {
+    const { error } = await supabase.from('expenses').delete().eq('id', payload)
+    if (error) console.error('syncExpense DELETE:', error)
+  }
+}
+
+export async function syncMemberAction(action, tripId) {
+  if (!supabase || !tripId) return
+  const { type, payload } = action
+
+  if (type === 'ADD_MEMBER') {
+    const { error } = await supabase.from('trip_members').insert({
+      id:        payload.id,
+      trip_id:   tripId,
+      name:      payload.name,
+      confirmed: payload.status === 'confirmed',
+      budget:    payload.budget ?? null,
+      role:      'member',
+    })
+    if (error) console.error('syncMember INSERT:', error)
+  } else if (type === 'UPDATE_MEMBER') {
+    const { id, ...rest } = payload
+    const { error } = await supabase.from('trip_members').update({
+      name:      rest.name,
+      confirmed: rest.status === 'confirmed',
+      budget:    rest.budget ?? null,
+    }).eq('id', id)
+    if (error) console.error('syncMember UPDATE:', error)
+  } else if (type === 'REMOVE_MEMBER') {
+    const { error } = await supabase.from('trip_members').delete().eq('id', payload)
+    if (error) console.error('syncMember DELETE:', error)
+  }
+}

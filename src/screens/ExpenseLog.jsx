@@ -160,7 +160,7 @@ export default function ExpenseLog() {
   }, [quick, confirmedMembers, state.trip.startDate])
 
   function handleSave(data) {
-    dispatch({ type: 'ADD_EXPENSE', payload: { id: `e_${Date.now()}`, createdAt: new Date().toISOString(), ...data } })
+    dispatch({ type: 'ADD_EXPENSE', payload: { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...data } })
     setSheet(null)
   }
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useMemo } from 'react'
+import { createContext, useContext, useReducer, useEffect, useMemo, useCallback, useRef } from 'react'
 import { differenceInCalendarDays, parseISO, format } from 'date-fns'
 import {
   DEFAULT_TRIP,
@@ -8,11 +8,22 @@ import {
   ACTIVITY_LIBRARY,
   BUDGET_ALERTS,
 } from '../lib/constants'
+import { useAuth } from './AuthContext'
+import { supabase } from '../lib/supabase'
+import {
+  loadUserTrip,
+  createTrip,
+  syncExpenseAction,
+  syncMemberAction,
+  expToLocal,
+  memberToLocal,
+} from '../lib/db'
 
 const STORAGE_KEY = 'safiri_v1'
 
 const initialState = {
   setupComplete: false,
+  tripDbId: null,
   groupSize: 1,
   trip: DEFAULT_TRIP,
   members: [],
@@ -55,8 +66,8 @@ function reducer(state, action) {
       const existingNames = new Set((state.members ?? []).map(m => m.name.toLowerCase()))
       const newFromSetup  = providedNames
         .filter(name => !existingNames.has(name.trim().toLowerCase()))
-        .map((name, i) => ({
-          id:       `m_setup_${i}_${Date.now()}`,
+        .map(name => ({
+          id:       crypto.randomUUID(),
           name:     name.trim(),
           status:   'confirmed',
           budget:   null,
@@ -65,6 +76,7 @@ function reducer(state, action) {
       return {
         ...state,
         setupComplete: true,
+        tripDbId:      null, // cleared so the DB-create effect fires
         groupSize:     groupSize     ?? state.groupSize,
         monthlyBudget: monthlyBudget ?? state.monthlyBudget,
         trip:    { ...state.trip, ...tripFields },
@@ -74,6 +86,40 @@ function reducer(state, action) {
 
     case 'RESET_SETUP':
       return { ...state, setupComplete: false }
+
+    // Replace local state with data loaded from Supabase (keeps itinerary/checklist/docs from localStorage)
+    case 'LOAD_FROM_DB':
+      return {
+        ...state,
+        setupComplete: true,
+        tripDbId:      action.payload.tripDbId,
+        groupSize:     action.payload.groupSize,
+        monthlyBudget: action.payload.monthlyBudget,
+        cashFloat:     action.payload.cashFloat,
+        categoryCaps:  action.payload.categoryCaps,
+        trip:          action.payload.trip,
+        members:       action.payload.members,
+        expenses:      action.payload.expenses,
+      }
+
+    case 'SET_TRIP_DB_ID':
+      return { ...state, tripDbId: action.payload }
+
+    // Realtime upserts — add if new, update if already present (deduplicates optimistic writes)
+    case 'UPSERT_EXPENSE': {
+      const exists = state.expenses.some(e => e.id === action.payload.id)
+      if (exists) {
+        return { ...state, expenses: state.expenses.map(e => e.id === action.payload.id ? { ...e, ...action.payload } : e) }
+      }
+      return { ...state, expenses: [action.payload, ...state.expenses] }
+    }
+    case 'UPSERT_MEMBER': {
+      const exists = (state.members ?? []).some(m => m.id === action.payload.id)
+      if (exists) {
+        return { ...state, members: state.members.map(m => m.id === action.payload.id ? { ...m, ...action.payload } : m) }
+      }
+      return { ...state, members: [...(state.members ?? []), action.payload] }
+    }
 
     case 'SET_TRIP':
       return { ...state, trip: { ...state.trip, ...action.payload } }
@@ -165,10 +211,76 @@ const TripContext = createContext(null)
 
 export function TripProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, null, load)
+  const { user }  = useAuth()
+  const userId    = user?.id ?? null
+  const syncingRef = useRef(false)
 
+  // Persist to localStorage on every state change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [state])
+
+  // Load trip from Supabase when the user signs in
+  useEffect(() => {
+    if (!supabase || !userId) return
+    loadUserTrip(userId).then(dbState => {
+      if (dbState) dispatch({ type: 'LOAD_FROM_DB', payload: dbState })
+    })
+  }, [userId])
+
+  // Create trip in Supabase when setup completes (or after migration from localStorage-only)
+  useEffect(() => {
+    if (!supabase || !userId || !state.setupComplete || state.tripDbId || syncingRef.current) return
+    syncingRef.current = true
+    createTrip(userId, state).then(async tripId => {
+      syncingRef.current = false
+      if (!tripId) return
+      const dbState = await loadUserTrip(userId)
+      if (dbState) dispatch({ type: 'LOAD_FROM_DB', payload: dbState })
+      else dispatch({ type: 'SET_TRIP_DB_ID', payload: tripId })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.setupComplete, state.tripDbId, userId])
+
+  // Realtime subscription — live updates from other members
+  useEffect(() => {
+    if (!supabase || !state.tripDbId) return
+    const tripId = state.tripDbId
+
+    const channel = supabase
+      .channel(`trip:${tripId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `trip_id=eq.${tripId}` },
+        ({ eventType, new: row, old }) => {
+          if (eventType === 'INSERT' || eventType === 'UPDATE') {
+            dispatch({ type: 'UPSERT_EXPENSE', payload: expToLocal(row) })
+          } else if (eventType === 'DELETE') {
+            dispatch({ type: 'DELETE_EXPENSE', payload: old.id })
+          }
+        })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_members', filter: `trip_id=eq.${tripId}` },
+        ({ eventType, new: row, old }) => {
+          if (eventType === 'INSERT' || eventType === 'UPDATE') {
+            dispatch({ type: 'UPSERT_MEMBER', payload: memberToLocal(row) })
+          } else if (eventType === 'DELETE') {
+            dispatch({ type: 'REMOVE_MEMBER', payload: old.id })
+          }
+        })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [state.tripDbId])
+
+  // Wrapped dispatch: updates local state immediately, then syncs to Supabase in background
+  const safeDispatch = useCallback((action) => {
+    dispatch(action)
+    if (!supabase || !userId) return
+    const tripId = state.tripDbId
+    if (['ADD_EXPENSE', 'UPDATE_EXPENSE', 'DELETE_EXPENSE'].includes(action.type)) {
+      syncExpenseAction(action, tripId)
+    } else if (['ADD_MEMBER', 'UPDATE_MEMBER', 'REMOVE_MEMBER'].includes(action.type)) {
+      syncMemberAction(action, tripId)
+    }
+  }, [state.tripDbId, userId])
 
   const computed = useMemo(() => {
     const { trip, members, expenses, committedCosts, categoryCaps: _categoryCaps } = state
@@ -261,7 +373,7 @@ export function TripProvider({ children }) {
   }, [state])
 
   return (
-    <TripContext.Provider value={{ state, dispatch, computed }}>
+    <TripContext.Provider value={{ state, dispatch: safeDispatch, computed }}>
       {children}
     </TripContext.Provider>
   )

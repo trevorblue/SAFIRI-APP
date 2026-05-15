@@ -261,7 +261,7 @@ function AddMemberSheet({ tripBudget, onClose }) {
     dispatch({
       type: 'ADD_MEMBER',
       payload: {
-        id:       `m_${Date.now()}`,
+        id:       crypto.randomUUID(),
         name:     name.trim(),
         status,
         budget:   custom && budget ? Number(budget) : null,
