@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #080E1C;
+  --color-surface: #101826;
+  --color-surface-2: #162032;
+  --color-surface-3: #1C2A40;
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+
+  --color-primary: #0ABFB0;
+  --color-primary-dim: rgba(10, 191, 176, 0.15);
+
+  --color-success: #34D399;
+  --color-success-dim: rgba(52, 211, 153, 0.12);
+
+  --color-warning: #FBBF24;
+  --color-warning-dim: rgba(251, 191, 36, 0.15);
+
+  --color-danger: #F87171;
+  --color-danger-dim: rgba(248, 113, 113, 0.12);
+
+  --color-text: #F0F4F8;
+  --color-muted: #64748B;
+  --color-muted-2: #94A3B8;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+body {
+  max-width: 430px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Scrollbar suppression on mobile */
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+/* Shared input style */
+.input-field {
+  width: 100%;
+  background: var(--color-surface-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: 14px;
+  padding: 13px 14px;
+  color: var(--color-text);
+  font-size: 15px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.18s;
+  color-scheme: dark;
+}
+
+.input-field:focus {
+  border-color: var(--color-primary);
+}
+
+.input-field::placeholder {
+  color: var(--color-muted);
+}
+
+/* Date input calendar icon tint */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
