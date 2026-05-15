@@ -25,7 +25,7 @@ export default function TripSetup() {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
-  const [showReset, setShowReset] = useState(false)
+  const [_showReset, _setShowReset] = useState(false)
 
   const [form, setFormState] = useState({
     name: state.trip.name,
@@ -265,7 +265,7 @@ function Step2({ form, set, tripDays, dailyBudget }) {
   )
 }
 
-function Step3({ form, set, tripDays, dailyBudget }) {
+function Step3({ form, set, tripDays, _dailyBudget }) {
   const isTotal = form.budgetMode === 'total'
   const budgetNum = Number(form.budgetPerPerson) || 0
   const perPerson = isTotal ? (form.groupSize > 0 ? Math.round(budgetNum / form.groupSize) : 0) : budgetNum

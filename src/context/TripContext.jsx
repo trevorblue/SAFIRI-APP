@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useMemo } from 'react'
-import { differenceInCalendarDays, parseISO, isAfter, isBefore, format } from 'date-fns'
+import { differenceInCalendarDays, parseISO, format } from 'date-fns'
 import {
   DEFAULT_TRIP,
   DEFAULT_ITINERARY,
@@ -50,7 +50,7 @@ function load() {
 function reducer(state, action) {
   switch (action.type) {
     case 'COMPLETE_SETUP': {
-      const { memberNames, budgetMode, groupSize, monthlyBudget, ...tripFields } = action.payload
+      const { memberNames, budgetMode: _budgetMode, groupSize, monthlyBudget, ...tripFields } = action.payload
       const providedNames = (memberNames ?? []).filter(n => n?.trim())
       const existingNames = new Set((state.members ?? []).map(m => m.name.toLowerCase()))
       const newFromSetup  = providedNames
@@ -171,7 +171,7 @@ export function TripProvider({ children }) {
   }, [state])
 
   const computed = useMemo(() => {
-    const { trip, members, expenses, committedCosts, categoryCaps } = state
+    const { trip, members, expenses, committedCosts, categoryCaps: _categoryCaps } = state
 
     const confirmedMembers = members.filter(m => m.status === 'confirmed')
     const memberCount = confirmedMembers.length > 0 ? confirmedMembers.length : (state.groupSize ?? 1)
@@ -267,12 +267,14 @@ export function TripProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTrip() {
   const ctx = useContext(TripContext)
   if (!ctx) throw new Error('useTrip must be used within TripProvider')
   return ctx
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useActivityById(id) {
   return ACTIVITY_LIBRARY.find(a => a.id === id) ?? null
 }

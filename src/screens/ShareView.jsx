@@ -6,6 +6,7 @@ import { formatKES, ACTIVITY_LIBRARY, AREA_COLORS } from '../lib/constants'
 
 // ── Encode / decode ──────────────────────────────────────────────────────────
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function encodeSharePayload(state, computed) {
   const payload = {
     v: 1,
@@ -80,9 +81,8 @@ export default function ShareView() {
     .filter(i => i.date === selectedDate)
     .sort((a, b) => (a.startTime || '99').localeCompare(b.startTime || '99'))
 
-  const snapshotAge = ts
-    ? Math.round((Date.now() - ts) / 60000)
-    : null
+  // eslint-disable-next-line react-hooks/purity
+  const snapshotAge = ts ? Math.round((Date.now() - ts) / 60000) : null
 
   return (
     <div className="min-h-full bg-[var(--color-bg)] pb-8">

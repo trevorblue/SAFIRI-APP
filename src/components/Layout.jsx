@@ -62,7 +62,7 @@ export default function Layout() {
       {/* Tab bar */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-[var(--color-surface)]/95 backdrop-blur-md border-t border-[var(--color-border)] z-40">
         <div className="flex items-center justify-around px-2 pt-2 pb-[env(safe-area-inset-bottom,8px)]">
-          {TABS.map((tab, i) => {
+          {TABS.map((tab) => {
             if (!tab) {
               return (
                 <motion.button

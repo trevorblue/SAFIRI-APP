@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format, parseISO, differenceInCalendarDays } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ZapIcon, TrendIcon, ChevronRightIcon, CalendarIcon, GroupIcon, CloseIcon } from '../components/icons'
 import { useTrip } from '../context/TripContext'

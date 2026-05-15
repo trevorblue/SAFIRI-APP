@@ -4,7 +4,7 @@ import { format, parseISO, subDays, isToday, isYesterday } from 'date-fns'
 import { useSearchParams } from 'react-router-dom'
 import { useTrip } from '../context/TripContext'
 import { formatKES, EXPENSE_CATEGORIES, PAYMENT_METHODS } from '../lib/constants'
-import { CloseIcon, WalletIcon } from '../components/icons'
+import { CloseIcon } from '../components/icons'
 import { parseExpenseWithClaude, hasClaudeKey } from '../lib/claude'
 
 // ─── Heuristic parser ────────────────────────────────────────────────────────
@@ -119,6 +119,7 @@ export default function ExpenseLog() {
   // Open pre-filled sheet when navigated from itinerary "Log →" button
   useEffect(() => {
     if (searchParams.get('add') === 'true') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSheet({
         initial: {
           amount:      searchParams.get('amount') ? Number(searchParams.get('amount')) : '',

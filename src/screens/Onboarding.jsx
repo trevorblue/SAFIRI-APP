@@ -293,7 +293,7 @@ function Step2({ form, set, tripDays, dailyBudget }) {
 }
 
 /* ─── Step 3: Group size + Budget + transport ─── */
-function Step3({ form, set, tripDays, dailyBudget, groupSize }) {
+function Step3({ form, set, tripDays, _dailyBudget, groupSize }) {
   const isTotal = form.budgetMode === 'total'
   const budgetNum = Number(form.budgetPerPerson) || 0
   const perPerson = isTotal ? (groupSize > 0 ? Math.round(budgetNum / groupSize) : 0) : budgetNum

@@ -430,7 +430,7 @@ function ItemSheet({ defaultDate, item, onSave, onDelete, onClose }) {
 
 // ─── Gap Sheet ───────────────────────────────────────────────────────────────
 
-function getSuggestions(cancelledItem, dayItems, allItinerary) {
+function getSuggestions(cancelledItem, dayItems, _allItinerary) {
   const startH  = parseInt(cancelledItem.startTime?.split(':')[0] ?? '12')
   const endH    = parseInt(cancelledItem.endTime?.split(':')[0]   ?? String(startH + 2))
   const gapHrs  = Math.max(0.5, endH - startH)
