@@ -1,13 +1,96 @@
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { useAuth } from '../context/AuthContext'
 import { useTrip } from '../context/TripContext'
 import { formatKES } from '../lib/constants'
+import { SettingsIcon, CloseIcon, LogOutIcon } from '../components/icons'
+
+function SettingsSheet({ onClose }) {
+  const { user, signOut } = useAuth()
+
+  return (
+    <>
+      <motion.div
+        className="fixed inset-0 z-50 bg-black/50"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-[var(--color-surface)] rounded-t-3xl border-t border-[var(--color-border)] z-50 pb-[env(safe-area-inset-bottom,24px)]"
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+      >
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-[var(--color-border-strong)]" />
+        </div>
+        <div className="flex items-center justify-between px-5 pt-2 pb-3 border-b border-[var(--color-border)]">
+          <span className="font-semibold text-[var(--color-text)]">Settings</span>
+          <motion.button
+            onClick={onClose}
+            className="text-[var(--color-muted)] p-1"
+            whileTap={{ scale: 0.85, rotate: 90 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+          >
+            <CloseIcon size={20} stroke="currentColor" />
+          </motion.button>
+        </div>
+
+        <div className="py-3">
+          {/* Account */}
+          <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Account</p>
+          <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl px-4 py-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[var(--color-primary-dim)] flex items-center justify-center text-[var(--color-primary)] font-bold text-base shrink-0">
+                {user?.email?.[0]?.toUpperCase() ?? '?'}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[var(--color-text)] text-sm font-medium truncate">{user?.email}</p>
+                <p className="text-[var(--color-muted)] text-xs">Signed in</p>
+              </div>
+            </div>
+          </div>
+
+          {/* App info */}
+          <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">App</p>
+          <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl divide-y divide-[var(--color-border)] mb-3 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[var(--color-text)] text-sm">Currency</span>
+              <span className="text-[var(--color-muted)] text-sm">KES</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[var(--color-text)] text-sm">Version</span>
+              <span className="text-[var(--color-muted)] text-sm">1.0.0</span>
+            </div>
+          </div>
+
+          {/* Sign out */}
+          <div className="px-4 pt-1">
+            <motion.button
+              onClick={async () => { onClose(); await signOut() }}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-[var(--color-danger)]/30 text-[var(--color-danger)] text-sm font-semibold"
+              whileTap={{ scale: 0.97 }}
+            >
+              <LogOutIcon size={16} stroke="currentColor" />
+              Sign out
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  )
+}
 
 export default function Home({ onEnterTrip, onCreateTrip }) {
-  const { user, signOut }              = useAuth()
+  const { user }                       = useAuth()
   const { state, computed }            = useTrip()
   const { trip, setupComplete }        = state
+  const [showSettings, setShowSettings] = useState(false)
 
   return (
     <motion.div
@@ -24,17 +107,18 @@ export default function Home({ onEnterTrip, onCreateTrip }) {
             <p className="text-[var(--color-muted)] text-xs mt-0.5 truncate max-w-[200px]">{user.email}</p>
           )}
         </div>
-        <button
-          onClick={signOut}
-          className="shrink-0 text-[var(--color-muted)] text-xs font-medium border border-[var(--color-border)] rounded-full px-3 py-1.5 mt-1"
+        <motion.button
+          onClick={() => setShowSettings(true)}
+          className="shrink-0 p-2 mt-0.5 text-[var(--color-muted)] rounded-full border border-[var(--color-border)]"
+          whileTap={{ scale: 0.88 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
         >
-          Sign out
-        </button>
+          <SettingsIcon size={18} stroke="currentColor" />
+        </motion.button>
       </div>
 
       {setupComplete ? (
         <>
-          {/* Active trip */}
           <p className="text-[var(--color-muted)] text-xs uppercase tracking-widest font-medium mb-3">
             Active
           </p>
@@ -96,7 +180,6 @@ export default function Home({ onEnterTrip, onCreateTrip }) {
             </div>
           </motion.div>
 
-          {/* New trip CTA */}
           <motion.button
             onClick={onCreateTrip}
             whileTap={{ scale: 0.97 }}
@@ -106,7 +189,6 @@ export default function Home({ onEnterTrip, onCreateTrip }) {
           </motion.button>
         </>
       ) : (
-        /* Empty state */
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -126,6 +208,10 @@ export default function Home({ onEnterTrip, onCreateTrip }) {
           </motion.button>
         </motion.div>
       )}
+
+      <AnimatePresence>
+        {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
+      </AnimatePresence>
     </motion.div>
   )
 }

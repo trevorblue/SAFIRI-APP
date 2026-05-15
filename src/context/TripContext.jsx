@@ -216,6 +216,10 @@ export function TripProvider({ children }) {
   const userId    = user?.id ?? null
   const syncingRef = useRef(false)
 
+  // Always-current snapshot of state for async callbacks
+  const latestStateRef = useRef(state)
+  useEffect(() => { latestStateRef.current = state })
+
   // Persist to localStorage on every state change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
@@ -224,9 +228,21 @@ export function TripProvider({ children }) {
   // Load trip from Supabase when the user signs in
   useEffect(() => {
     if (!supabase || !userId) return
-    loadUserTrip(userId).then(dbState => {
-      if (dbState) dispatch({ type: 'LOAD_FROM_DB', payload: dbState })
+    // Capture local members before async call so we can re-sync if DB is empty
+    const localMembers = (latestStateRef.current.members ?? []).filter(m => m.status === 'confirmed')
+    loadUserTrip(userId).then(async dbState => {
+      if (!dbState) return
+      dispatch({ type: 'LOAD_FROM_DB', payload: dbState })
+      // Re-sync members if DB returned none (e.g. original insert failed before migration)
+      if (dbState.members.length === 0 && localMembers.length > 0) {
+        await Promise.all(localMembers.map(m =>
+          syncMemberAction({ type: 'ADD_MEMBER', payload: m }, dbState.tripDbId)
+        ))
+        const refreshed = await loadUserTrip(userId)
+        if (refreshed) dispatch({ type: 'LOAD_FROM_DB', payload: refreshed })
+      }
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
   // Create trip in Supabase when setup completes (or after migration from localStorage-only)

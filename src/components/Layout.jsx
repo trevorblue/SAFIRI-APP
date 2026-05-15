@@ -54,7 +54,7 @@ export default function Layout({ onExitTrip }) {
             transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="min-h-full"
           >
-            <Outlet />
+            <Outlet context={{ onExitTrip }} />
           </motion.div>
         </AnimatePresence>
       </main>

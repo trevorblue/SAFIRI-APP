@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ZapIcon, TrendIcon, ChevronRightIcon, CalendarIcon, GroupIcon, CloseIcon } from '../components/icons'
+import { ZapIcon, TrendIcon, ChevronRightIcon, CalendarIcon, GroupIcon, CloseIcon, BackIcon } from '../components/icons'
 import { useTrip } from '../context/TripContext'
 import { formatKES, EXPENSE_CATEGORIES } from '../lib/constants'
 import AnimatedNumber from '../components/AnimatedNumber'
@@ -20,6 +20,7 @@ const fadeUp = {
 export default function Dashboard() {
   const { state, computed, dispatch } = useTrip()
   const navigate = useNavigate()
+  const { onExitTrip } = useOutletContext() || {}
   const [capCat, setCapCat] = useState(null) // category id being edited
 
   const {
@@ -60,6 +61,15 @@ export default function Dashboard() {
     >
       {/* Header */}
       <motion.div variants={fadeUp} className="px-5 pt-12 pb-6">
+        {onExitTrip && (
+          <button
+            onClick={onExitTrip}
+            className="flex items-center gap-1 text-[var(--color-muted)] text-xs mb-3 -ml-0.5"
+          >
+            <BackIcon size={13} stroke="currentColor" />
+            My Trips
+          </button>
+        )}
         <div className="flex items-start justify-between mb-1">
           {/* Tappable trip identity — goes to setup */}
           <motion.button
