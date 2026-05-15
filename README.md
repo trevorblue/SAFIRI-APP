@@ -1,6 +1,6 @@
 # Safiri — Group Trip Planner & Budget Tracker
 
-> **Safiri** (Swahili: *journey*) — A PWA built for group travel in East Africa. One treasurer controls everything. The group gets a live read-only view. Designed to work at 1am when everyone else has been drinking.
+> **Safiri** (Swahili: *journey*) — A PWA built for group travel in East Africa. Any number of users can create and manage trips as treasurers. Each treasurer controls their trips completely; the group gets a live read-only view. Designed to work at 1am when everyone else has been drinking.
 
 ---
 
@@ -160,14 +160,17 @@ App runs at `http://localhost:5173`
 Five tables on Supabase:
 
 ```sql
-trips          -- Trip config: name, dates, budget, owner
+trips          -- Trip config: name, dates, budget, owner, status (active/complete/cancelled)
 trip_members   -- Who's on the trip, their role (owner / member)
 expenses       -- All expenses with split_between, category, paid_by
 itinerary      -- Scheduled activities with status
 checklist      -- Pre-trip to-do items
 ```
 
-Row-level security ensures users can only read/write their own trips.
+- Any user can be a treasurer — they own and manage their own trips independently
+- A user can have many trips (past, active, and future) all stored in their account
+- Trips are **never deleted** — completed and cancelled trips are archived and remain accessible forever
+- Row-level security ensures users can only read/write their own trips
 
 ---
 
@@ -196,17 +199,18 @@ GitHub Actions runs on every pull request:
 - [x] Itemized settle-up with per-expense breakdown
 - [x] Split-between for partial group expenses
 - [x] Claude AI expense parsing (wired, needs API key)
-- [ ] Supabase sync + auth
+- [ ] Supabase sync + auth (any user can register and become a treasurer)
+- [ ] Multiple trips per account — past, active, and future all stored
+- [ ] Trip history: completed and cancelled trips archived forever, never deleted
 - [ ] Read-only share link for group members
 - [ ] Role-based access (treasurer vs. member)
 - [ ] PWA manifest + installable
 - [ ] Vercel deploy
 
 ### V2 — Post-Trip Refinement
-- Multiple trips per account
-- Trip archive & history
 - Export to PDF / M-Pesa receipt format
 - Push notifications for expense alerts
+- Trip templates (reuse a setup for recurring group travel)
 
 ### V3 — East Africa Expansion
 - Multi-currency (UGX, TZS, ETB)
