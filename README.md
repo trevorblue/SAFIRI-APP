@@ -23,11 +23,11 @@ Schedule, to-do list, and live group guide in one screen. Activities have time s
 ### 3. Location-Aware Activities
 Activity library with travel time flags, area colour-coding, and time-of-day constraints. The app knows that Haller Park is an afternoon activity and Fort Jesus is a full-day visit.
 
-### 4. Adaptive Schedule (Claude AI)
-Cancel an activity → gap analysis → filtered local suggestions → Claude API for smart AI picks tailored to your group's remaining budget and time.
+### 4. Adaptive Schedule (AI-powered)
+Cancel an activity → gap analysis → filtered local suggestions → AI picks tailored to your group's remaining budget and time.
 
 ### 5. Expense Logging
-- **Quick entry via Claude AI**: type "paid 800 for lunch, split with Brian and Cynthia" and hit Parse — AI extracts description, amount, category, date, payer, and split
+- **Quick entry via AI**: type "paid 800 for lunch, split with Brian and Cynthia" and hit Parse — AI extracts description, amount, category, date, payer, and split
 - **Manual form** with full control
 - **Split between**: charge any expense to specific members, not the whole group
 - **Pre-trip vs trip expenses** tracked separately
@@ -69,7 +69,7 @@ After the trip: who owes who, how much, and exactly what each charge was for. Ta
 | Animation | Framer Motion v12 |
 | Icons | Lucide React |
 | Date handling | date-fns v4 |
-| AI parsing | Anthropic Claude API (`claude-haiku-4-5`) |
+| AI parsing | Natural language processing API |
 | Database & Auth | Supabase (PostgreSQL + Realtime + Auth) |
 | PWA | vite-plugin-pwa |
 | Deploy | Vercel |
@@ -95,7 +95,7 @@ src/
 │   └── TripContext.jsx   # Global state (useReducer + localStorage)
 ├── lib/
 │   ├── constants.js      # Categories, activities, KES formatter
-│   ├── claude.js         # Anthropic API client + NL expense parser
+│   ├── ai.js             # AI client + natural language expense parser
 │   ├── supabase.js       # Supabase client
 │   └── demoSeed.js       # Demo data for testing
 ├── components/           # Shared UI components
@@ -109,7 +109,7 @@ src/
 ### Prerequisites
 - Node.js 18+
 - A [Supabase](https://supabase.com) account (free)
-- An [Anthropic](https://console.anthropic.com) API key (optional — app works without it, AI parsing disabled)
+- An AI API key (optional — app works without it, AI parsing disabled)
 
 ### 1. Clone and install
 
@@ -150,8 +150,6 @@ App runs at `http://localhost:5173`
 | `VITE_SUPABASE_URL` | Yes (for sync) | Your Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Yes (for sync) | Your Supabase anon/public key |
 | `VITE_ANTHROPIC_API_KEY` | No | Enables AI-powered expense parsing. Without it, the app uses a local heuristic parser |
-
-> **Note:** The Anthropic key is your personal API key from [console.anthropic.com](https://console.anthropic.com) — it is completely separate from any Claude subscription or Claude Code account.
 
 ---
 
@@ -198,7 +196,7 @@ GitHub Actions runs on every pull request:
 - [x] All 13 features built (localStorage)
 - [x] Itemized settle-up with per-expense breakdown
 - [x] Split-between for partial group expenses
-- [x] Claude AI expense parsing (wired, needs API key)
+- [x] AI expense parsing (wired, needs API key)
 - [ ] Supabase sync + auth (any user can register and become a treasurer)
 - [ ] Multiple trips per account — past, active, and future all stored
 - [ ] Trip history: completed and cancelled trips archived forever, never deleted
@@ -245,4 +243,4 @@ MIT — use it, fork it, adapt it for your own group trip.
 
 ---
 
-*Built with Claude Code by Erick Were*
+*Built by Trevor Vuhyah*
