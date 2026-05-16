@@ -344,7 +344,14 @@ export function TripProvider({ children }) {
     const memberSpending = {}
     for (const e of tripExpenses) {
       byCategory[e.category] = (byCategory[e.category] || 0) + e.amount
-      if (e.paidBy) memberSpending[e.paidBy] = (memberSpending[e.paidBy] || 0) + e.amount
+      if (e.splitBetween?.length > 0) {
+        const share = e.amount / e.splitBetween.length
+        for (const id of e.splitBetween) {
+          memberSpending[id] = (memberSpending[id] || 0) + share
+        }
+      } else if (e.paidBy) {
+        memberSpending[e.paidBy] = (memberSpending[e.paidBy] || 0) + e.amount
+      }
     }
 
     // Alert level
