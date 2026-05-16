@@ -15,6 +15,7 @@ import {
   createTrip,
   syncExpenseAction,
   syncMemberAction,
+  syncTripSettings,
   expToLocal,
   memberToLocal,
 } from '../lib/db'
@@ -28,6 +29,7 @@ const initialState = {
   trip: DEFAULT_TRIP,
   members: [],
   expenses: [],
+  contributions: [],
   itinerary: DEFAULT_ITINERARY,
   committedCosts: DEFAULT_COMMITTED_COSTS,
   categoryCaps: { drinks: 5000 },
@@ -48,6 +50,7 @@ function load() {
       ...parsed,
       members:        Array.isArray(parsed.members)        ? parsed.members        : [],
       expenses:       Array.isArray(parsed.expenses)       ? parsed.expenses       : [],
+      contributions:  Array.isArray(parsed.contributions)  ? parsed.contributions  : [],
       committedCosts: Array.isArray(parsed.committedCosts) ? parsed.committedCosts : initialState.committedCosts,
       itinerary:      Array.isArray(parsed.itinerary)      ? parsed.itinerary      : initialState.itinerary,
       checklist:      Array.isArray(parsed.checklist)      ? parsed.checklist      : initialState.checklist,
@@ -98,6 +101,7 @@ function reducer(state, action) {
         monthlyBudget: action.payload.monthlyBudget,
         cashFloat:     action.payload.cashFloat,
         categoryCaps:  action.payload.categoryCaps,
+        contributions: action.payload.contributions ?? [],
         trip:          action.payload.trip,
         members:       action.payload.members.length > 0 ? action.payload.members : state.members,
         expenses:      action.payload.expenses,
@@ -134,6 +138,11 @@ function reducer(state, action) {
       }
     case 'REMOVE_MEMBER':
       return { ...state, members: (state.members ?? []).filter(m => m.id !== action.payload) }
+
+    case 'ADD_CONTRIBUTION':
+      return { ...state, contributions: [...(state.contributions ?? []), action.payload] }
+    case 'REMOVE_CONTRIBUTION':
+      return { ...state, contributions: (state.contributions ?? []).filter(c => c.id !== action.payload) }
 
     case 'ADD_EXPENSE':
       return { ...state, expenses: [action.payload, ...state.expenses] }
@@ -296,6 +305,24 @@ export function TripProvider({ children }) {
       syncExpenseAction(action, tripId)
     } else if (['ADD_MEMBER', 'UPDATE_MEMBER', 'REMOVE_MEMBER'].includes(action.type)) {
       syncMemberAction(action, tripId)
+    } else if (action.type === 'ADD_CONTRIBUTION' || action.type === 'REMOVE_CONTRIBUTION') {
+      const s = latestStateRef.current
+      const current = s.contributions ?? []
+      const newContributions = action.type === 'ADD_CONTRIBUTION'
+        ? [...current, action.payload]
+        : current.filter(c => c.id !== action.payload)
+      syncTripSettings(tripId, {
+        destination:      s.trip.destination,
+        transportMode:    s.trip.transportMode,
+        sgrCostPerPerson: s.trip.sgrCostPerPerson,
+        carTotalCost:     s.trip.carTotalCost,
+        carType:          s.trip.carType,
+        groupSize:        s.groupSize,
+        monthlyBudget:    s.monthlyBudget,
+        cashFloat:        s.cashFloat,
+        categoryCaps:     s.categoryCaps,
+        contributions:    newContributions,
+      })
     }
   }, [state.tripDbId, userId])
 
@@ -339,18 +366,32 @@ export function TripProvider({ children }) {
     const todaySpent = todayExpenses.reduce((sum, e) => sum + e.amount, 0)
     const todayRemaining = dailyBudget - todaySpent
 
-    // Category + per-member spending
+    // Category + per-member share (splitBetween; falls back to all confirmed members)
     const byCategory = {}
     const memberSpending = {}
+    const allConfirmedIds = confirmedMembers.map(m => m.id)
     for (const e of tripExpenses) {
       byCategory[e.category] = (byCategory[e.category] || 0) + e.amount
-      if (e.splitBetween?.length > 0) {
-        const share = e.amount / e.splitBetween.length
-        for (const id of e.splitBetween) {
+      const splitIds = e.splitBetween?.length > 0 ? e.splitBetween : allConfirmedIds
+      if (splitIds.length > 0) {
+        const share = e.amount / splitIds.length
+        for (const id of splitIds) {
           memberSpending[id] = (memberSpending[id] || 0) + share
         }
-      } else if (e.paidBy) {
-        memberSpending[e.paidBy] = (memberSpending[e.paidBy] || 0) + e.amount
+      }
+    }
+
+    // Cash physically put in per member (paidBy on expenses + direct contributions)
+    const cashContributed = {}
+    for (const m of confirmedMembers) cashContributed[m.id] = 0
+    for (const e of tripExpenses) {
+      if (e.paidBy && cashContributed[e.paidBy] !== undefined) {
+        cashContributed[e.paidBy] += e.amount
+      }
+    }
+    for (const c of (state.contributions ?? [])) {
+      if (cashContributed[c.memberId] !== undefined) {
+        cashContributed[c.memberId] = (cashContributed[c.memberId] || 0) + c.amount
       }
     }
 
@@ -387,6 +428,7 @@ export function TripProvider({ children }) {
       todayRemaining,
       byCategory,
       memberSpending,
+      cashContributed,
       alertLevel,
       daysToTrip,
       tripDaysRemaining,

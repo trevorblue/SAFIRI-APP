@@ -59,6 +59,7 @@ export async function loadUserTrip(userId) {
     monthlyBudget: s.monthlyBudget ?? null,
     cashFloat:     Number(s.cashFloat ?? 0),
     categoryCaps:  s.categoryCaps ?? { drinks: 5000 },
+    contributions: Array.isArray(s.contributions) ? s.contributions : [],
     trip: {
       name:             trip.name,
       destination:      s.destination ?? '',
@@ -73,6 +74,12 @@ export async function loadUserTrip(userId) {
     members:  (members  ?? []).map(memberToLocal),
     expenses: (expenses ?? []).map(expToLocal),
   }
+}
+
+export async function syncTripSettings(tripId, settings) {
+  if (!supabase || !tripId) return
+  const { error } = await supabase.from('trips').update({ settings }).eq('id', tripId)
+  if (error) console.error('syncTripSettings:', error)
 }
 
 // Insert a new trip + its confirmed members → return the Supabase trip UUID

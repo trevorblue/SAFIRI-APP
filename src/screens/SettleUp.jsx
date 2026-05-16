@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { useTrip } from '../context/TripContext'
 import { formatKES, EXPENSE_CATEGORIES } from '../lib/constants'
 
-function calcSettlement(expenses, members, memberCount) {
+function calcSettlement(expenses, members, memberCount, contributions = []) {
   if (!members.length || memberCount === 0) {
     return { transactions: [], balances: [], total: 0, fairShare: 0 }
   }
@@ -20,13 +20,19 @@ function calcSettlement(expenses, members, memberCount) {
     if (e.paidBy && paid[e.paidBy] !== undefined) {
       paid[e.paidBy] += e.amount
     }
-    // Use splitBetween if set, otherwise split among everyone
     const splitIds = (e.splitBetween?.length > 0)
       ? e.splitBetween.filter(id => owes[id] !== undefined)
       : allMemberIds
     if (splitIds.length > 0) {
       const share = e.amount / splitIds.length
       for (const id of splitIds) owes[id] += share
+    }
+  }
+
+  // Direct cash contributions count as additional cash put in
+  for (const c of contributions) {
+    if (paid[c.memberId] !== undefined) {
+      paid[c.memberId] += c.amount
     }
   }
 
@@ -91,8 +97,9 @@ export default function SettleUp() {
       state.expenses.filter(e => !e.isPreTrip),
       computed.confirmedMembers,
       computed.memberCount,
+      state.contributions ?? [],
     ),
-    [state.expenses, computed.confirmedMembers, computed.memberCount],
+    [state.expenses, computed.confirmedMembers, computed.memberCount, state.contributions],
   )
 
   const [expandedId, setExpandedId] = useState(null)
@@ -121,6 +128,17 @@ export default function SettleUp() {
             </div>
           </div>
 
+          {/* Legend */}
+          <div className="bg-[var(--color-surface-2)] rounded-2xl p-3.5 mb-4 space-y-1.5">
+            <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-medium mb-2">How to read this</p>
+            <p className="text-xs text-[var(--color-muted)]">
+              <span className="text-[var(--color-success)] font-semibold">Green (+)</span> — put in more cash than their share of expenses → should receive money back
+            </p>
+            <p className="text-xs text-[var(--color-muted)]">
+              <span className="text-[var(--color-danger)] font-semibold">Red (−)</span> — consumed more than they paid for → needs to send money to someone
+            </p>
+          </div>
+
           {/* Per-member contributions */}
           <div className="bg-[var(--color-surface)] rounded-2xl overflow-hidden mb-4">
             <p className="text-[var(--color-muted)] text-xs uppercase tracking-widest font-medium px-4 pt-4 pb-3">Contributions</p>
@@ -134,7 +152,7 @@ export default function SettleUp() {
                     <div className="text-left">
                       <p className="text-[var(--color-text)] text-sm font-medium">{m.name}</p>
                       <p className="text-[var(--color-muted)] text-xs">
-                        paid {formatKES(m.paid)} · owes {formatKES(m.owes)}
+                        cash in {formatKES(m.paid)} · share {formatKES(m.owes)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -299,7 +317,7 @@ export default function SettleUp() {
           )}
 
           <p className="text-[var(--color-muted)] text-xs text-center mt-4">
-            Only expenses with a "paid by" are included
+            Log expenses with "Paid by" and add cash contributions on the Members page to keep this accurate
           </p>
         </>
       )}
