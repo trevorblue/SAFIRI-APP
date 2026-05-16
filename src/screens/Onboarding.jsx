@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { differenceInCalendarDays, parseISO } from 'date-fns'
-import { useTrip } from '../context/TripContext'
 import { DEFAULT_TRIP, formatKES } from '../lib/constants'
-import { BackIcon, ForwardIcon, MapPinIcon, CalendarIcon, WalletIcon, TrainIcon, CarIcon } from '../components/icons'
+import { BackIcon, CloseIcon, ForwardIcon, MapPinIcon, CalendarIcon, WalletIcon, TrainIcon, CarIcon } from '../components/icons'
 
 const STEPS = 3
 
@@ -21,8 +20,7 @@ const slideVariants = {
 
 const transition = { type: 'spring', stiffness: 340, damping: 34 }
 
-export default function Onboarding() {
-  const { dispatch } = useTrip()
+export default function Onboarding({ onComplete, onCancel }) {
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
 
@@ -70,24 +68,20 @@ export default function Onboarding() {
       ? Math.round(Number(form.budgetPerPerson) / form.groupSize)
       : Number(form.budgetPerPerson)
 
-    // Compute car total from type + daily rate + rental days
     let carTotalCost = Number(form.carTotalCost) || 0
     if (form.transportMode === 'car' && Number(form.carDailyRate) > 0) {
-      const carType   = CAR_TYPES.find(t => t.id === form.carType) ?? CAR_TYPES[0]
+      const carType    = CAR_TYPES.find(t => t.id === form.carType) ?? CAR_TYPES[0]
       const carsNeeded = Math.ceil(form.groupSize / carType.capacity)
       const days       = Number(form.rentalDays) || tripDays
       carTotalCost     = carsNeeded * Number(form.carDailyRate) * days
     }
 
-    dispatch({
-      type: 'COMPLETE_SETUP',
-      payload: {
-        ...form,
-        budgetPerPerson: perPerson,
-        groupSize: form.groupSize,
-        monthlyBudget: form.monthlyBudget ? Number(form.monthlyBudget) : null,
-        carTotalCost,
-      },
+    onComplete({
+      ...form,
+      budgetPerPerson: perPerson,
+      groupSize: form.groupSize,
+      monthlyBudget: form.monthlyBudget ? Number(form.monthlyBudget) : null,
+      carTotalCost,
     })
   }
 
@@ -109,11 +103,14 @@ export default function Onboarding() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 pt-14 pb-4">
         <motion.button
-          onClick={back}
-          className={`p-2 rounded-full text-[var(--color-muted)] transition-opacity ${step === 0 ? 'opacity-0 pointer-events-none' : ''}`}
+          onClick={step === 0 ? onCancel : back}
+          className="p-2 rounded-full text-[var(--color-muted)]"
           whileTap={{ scale: 0.85 }}
         >
-          <BackIcon size={22} stroke="currentColor" />
+          {step === 0
+            ? <CloseIcon size={22} stroke="currentColor" />
+            : <BackIcon size={22} stroke="currentColor" />
+          }
         </motion.button>
 
         {/* Step dots */}

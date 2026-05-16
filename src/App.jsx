@@ -55,17 +55,18 @@ function AppShell() {
   const { session } = useAuth()
   const { state, dispatch } = useTrip()
 
-  // After onboarding completes, return to Home so the new trip card is visible
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (state.setupComplete && view === 'onboarding') setView('home')
-  }, [state.setupComplete, view])
-
   // Reset to home on sign-out so the next sign-in starts fresh
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (session === null) setView('home')
   }, [session])
+
+  function handleTripComplete(payload) {
+    // Clear old trip data only when the user actually finishes setting up the new one
+    dispatch({ type: 'RESET' })
+    dispatch({ type: 'COMPLETE_SETUP', payload })
+    setView('home')
+  }
 
   return (
     <AnimatePresence mode="wait">
@@ -75,17 +76,18 @@ function AppShell() {
       ) : session === null ? (
         <Login key="login" />
       ) : view === 'onboarding' ? (
-        <Onboarding key="onboarding" />
+        <Onboarding
+          key="onboarding"
+          onComplete={handleTripComplete}
+          onCancel={() => setView('home')}
+        />
       ) : view === 'trip' && state.setupComplete ? (
         <AppRoutes key="app" onExitTrip={() => setView('home')} />
       ) : (
         <Home
           key="home"
           onEnterTrip={() => setView('trip')}
-          onCreateTrip={() => {
-            dispatch({ type: 'RESET' })
-            setView('onboarding')
-          }}
+          onCreateTrip={() => setView('onboarding')}
         />
       )}
     </AnimatePresence>

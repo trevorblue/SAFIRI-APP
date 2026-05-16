@@ -6,7 +6,7 @@ import { formatKES } from '../lib/constants'
 import MoreMenu from './MoreMenu'
 import TutorialOverlay from './TutorialOverlay'
 import { hasTutorialBeenSeen } from '../lib/tutorial'
-import { BudgetIcon, MembersIcon, SettleIcon, MoreIcon, AddIcon } from './icons'
+import { BudgetIcon, MembersIcon, SettleIcon, MoreIcon, AddIcon, HomeIcon } from './icons'
 
 const TABS = [
   { to: '/', Icon: BudgetIcon,  label: 'Budget',  tourId: 'tab-budget'  },
@@ -65,6 +65,16 @@ export default function Layout({ onExitTrip }) {
       {/* Tab bar */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-[var(--color-surface)]/95 backdrop-blur-md border-t border-[var(--color-border)] z-40">
         <div className="flex items-center justify-around px-2 pt-2 pb-[env(safe-area-inset-bottom,8px)]">
+          <motion.button
+            onClick={onExitTrip}
+            className="flex flex-col items-center gap-1 py-1 px-2 text-[var(--color-muted)]"
+            whileTap={{ scale: 0.88 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+          >
+            <HomeIcon size={22} stroke="currentColor" />
+            <span className="text-[10px]">Home</span>
+          </motion.button>
+
           {TABS.map((tab) => {
             if (!tab) {
               return (
