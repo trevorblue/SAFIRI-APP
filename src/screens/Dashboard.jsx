@@ -6,6 +6,7 @@ import { ZapIcon, TrendIcon, ChevronRightIcon, CalendarIcon, GroupIcon, CloseIco
 import { useTrip } from '../context/TripContext'
 import { formatKES, EXPENSE_CATEGORIES } from '../lib/constants'
 import AnimatedNumber from '../components/AnimatedNumber'
+import DonutChart from '../components/DonutChart'
 
 const stagger = {
   hidden: {},
@@ -315,6 +316,13 @@ export default function Dashboard() {
           />
         </div>
       </motion.div>
+
+      {/* Donut chart */}
+      {totalSpent > 0 && (
+        <motion.div variants={fadeUp}>
+          <DonutChart byCategory={byCategory} total={totalSpent} />
+        </motion.div>
+      )}
 
       {/* Category breakdown */}
       {activeCategories.length > 0 && (
