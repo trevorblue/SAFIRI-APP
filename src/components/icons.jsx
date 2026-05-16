@@ -316,3 +316,14 @@ export function SettingsIcon({ size = 20, stroke = 'currentColor', ...p }) {
     </svg>
   )
 }
+
+// Tour / compass — used for "Show tour" menu item
+export function TourIcon({ size = 20, stroke = 'currentColor', ...p }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" stroke={stroke} {...base} {...p}>
+      <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+      <polygon points="16.24,7.76 14.12,14.12 7.76,16.24 9.88,9.88" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="1.5" strokeWidth="0" fill={stroke} />
+    </svg>
+  )
+}

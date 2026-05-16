@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useTrip } from '../context/TripContext'
 import { formatKES } from '../lib/constants'
 import MoreMenu from './MoreMenu'
+import TutorialOverlay from './TutorialOverlay'
+import { hasTutorialBeenSeen } from '../lib/tutorial'
 import { BudgetIcon, MembersIcon, SettleIcon, MoreIcon, AddIcon } from './icons'
 
 const TABS = [
@@ -15,7 +17,8 @@ const TABS = [
 
 export default function Layout({ onExitTrip }) {
   const { computed } = useTrip()
-  const [showMore, setShowMore] = useState(false)
+  const [showMore, setShowMore]         = useState(false)
+  const [showTutorial, setShowTutorial] = useState(() => !hasTutorialBeenSeen())
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -137,7 +140,17 @@ export default function Layout({ onExitTrip }) {
       </nav>
 
       <AnimatePresence>
-        {showMore && <MoreMenu onClose={() => setShowMore(false)} onExitTrip={onExitTrip} />}
+        {showMore && (
+          <MoreMenu
+            onClose={() => setShowMore(false)}
+            onExitTrip={onExitTrip}
+            onShowTutorial={() => { setShowMore(false); setShowTutorial(true) }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
       </AnimatePresence>
     </div>
   )

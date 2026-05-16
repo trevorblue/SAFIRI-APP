@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SetupIcon, PlanIcon, AffordIcon, ChecklistIcon, VaultIcon, CloseIcon, ShareIcon, HomeIcon, LogOutIcon } from './icons'
+import { SetupIcon, PlanIcon, AffordIcon, ChecklistIcon, VaultIcon, CloseIcon, ShareIcon, HomeIcon, LogOutIcon, TourIcon } from './icons'
 import { useTrip } from '../context/TripContext'
 import { useAuth } from '../context/AuthContext'
 import { encodeSharePayload } from '../screens/ShareView'
@@ -22,7 +22,7 @@ const itemVariants = {
   }),
 }
 
-export default function MoreMenu({ onClose, onExitTrip }) {
+export default function MoreMenu({ onClose, onExitTrip, onShowTutorial }) {
   const navigate  = useNavigate()
   const { state, computed } = useTrip()
   const { user, signOut } = useAuth()
@@ -120,6 +120,30 @@ export default function MoreMenu({ onClose, onExitTrip }) {
               </div>
             </motion.button>
           ))}
+
+          {/* Tour + Share divider */}
+          <div className="mx-5 my-2 border-t border-[var(--color-border)]" />
+
+          {/* Show tour */}
+          {onShowTutorial && (
+            <motion.button
+              custom={items.length + 1}
+              variants={itemVariants}
+              initial="hidden"
+              animate="visible"
+              onClick={onShowTutorial}
+              className="w-full flex items-center gap-4 px-5 py-3.5 text-left"
+              whileTap={{ backgroundColor: 'var(--color-surface-2)', scale: 0.99 }}
+            >
+              <span className="text-[var(--color-primary)]">
+                <TourIcon size={20} stroke="currentColor" />
+              </span>
+              <div>
+                <div className="text-[var(--color-text)] text-sm font-medium">Show tour</div>
+                <div className="text-[var(--color-muted)] text-xs">Replay the quick-start guide</div>
+              </div>
+            </motion.button>
+          )}
 
           {/* Share divider */}
           <div className="mx-5 my-2 border-t border-[var(--color-border)]" />
