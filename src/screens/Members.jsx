@@ -49,8 +49,13 @@ export default function Members() {
         <div className="flex items-end justify-between">
           <h1 className="text-[var(--color-text)] text-3xl font-bold">Members</h1>
           <div className="text-right">
-            <span className="text-[var(--color-text)] font-bold text-xl">{confirmedMembers.length}</span>
-            <span className="text-[var(--color-muted)] text-xs ml-1">confirmed</span>
+            <div>
+              <span className="text-[var(--color-text)] font-bold text-xl">{confirmedMembers.length}</span>
+              <span className="text-[var(--color-muted)] text-xs ml-1">confirmed</span>
+            </div>
+            {state.groupSize > confirmedMembers.length && (
+              <p className="text-[var(--color-muted)] text-[10px] mt-0.5">{state.groupSize} expected</p>
+            )}
           </div>
         </div>
       </motion.div>
@@ -220,7 +225,9 @@ export default function Members() {
             </motion.p>
             <p className="text-[var(--color-text)] font-semibold mb-1">No members yet</p>
             <p className="text-[var(--color-muted)] text-sm max-w-[240px] mx-auto">
-              Add your travel mates to track who's spending what
+              {state.groupSize > 1
+                ? `Your trip expects ${state.groupSize} travellers. Add them below or invite via link.`
+                : 'Add your travel mates to track who\'s spending what'}
             </p>
           </motion.div>
         )}
