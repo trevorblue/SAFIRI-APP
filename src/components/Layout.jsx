@@ -4,13 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useTrip } from '../context/TripContext'
 import { formatKES } from '../lib/constants'
 import MoreMenu from './MoreMenu'
-import { BudgetIcon, PlanIcon, AffordIcon, MoreIcon, AddIcon } from './icons'
+import { BudgetIcon, MembersIcon, SettleIcon, MoreIcon, AddIcon } from './icons'
 
 const TABS = [
   { to: '/', Icon: BudgetIcon, label: 'Budget' },
-  { to: '/itinerary', Icon: PlanIcon, label: 'Plan' },
+  { to: '/members', Icon: MembersIcon, label: 'Members' },
   null,
-  { to: '/afford', Icon: AffordIcon, label: 'Afford?' },
+  { to: '/settle', Icon: SettleIcon, label: 'Settle' },
 ]
 
 export default function Layout({ onExitTrip }) {

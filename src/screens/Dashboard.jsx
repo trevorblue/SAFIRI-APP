@@ -64,9 +64,9 @@ export default function Dashboard() {
         {onExitTrip && (
           <button
             onClick={onExitTrip}
-            className="flex items-center gap-1 text-[var(--color-muted)] text-xs mb-3 -ml-0.5"
+            className="flex items-center gap-1.5 text-[var(--color-primary)] text-sm font-medium mb-3 -ml-0.5"
           >
-            <BackIcon size={13} stroke="currentColor" />
+            <BackIcon size={15} stroke="currentColor" />
             My Trips
           </button>
         )}

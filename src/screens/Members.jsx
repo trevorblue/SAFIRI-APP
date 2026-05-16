@@ -28,7 +28,7 @@ export default function Members() {
   const [contribMember, setContribMember] = useState(null)
 
   const { members, trip, expenses, contributions } = state
-  const { totalBudget, memberSpending, cashContributed } = computed
+  const { totalBudget, cashContributed } = computed
 
   const confirmedMembers = members.filter(m => m.status === 'confirmed')
   const confirmedIds     = confirmedMembers.map(m => m.id)
@@ -106,10 +106,10 @@ export default function Members() {
                     <p className="text-[var(--color-muted)] text-[10px]">{state.groupSize} × {formatKES(trip.budgetPerPerson)}</p>
                   </div>
                   <div className={`rounded-xl p-3 ${gap < 0 ? 'bg-[var(--color-danger-dim)]' : 'bg-[var(--color-success-dim)]'}`}>
-                    <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide mb-0.5">Actual</p>
+                    <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide mb-0.5">Committed</p>
                     <p className="text-[var(--color-text)] font-semibold text-sm">{formatKES(actual)}</p>
                     <p className={`text-[10px] font-medium ${gap < 0 ? 'text-[var(--color-danger)]' : 'text-[var(--color-success)]'}`}>
-                      {gap < 0 ? `${formatKES(Math.abs(gap))} short` : gap > 0 ? `${formatKES(gap)} surplus` : 'On target'}
+                      {gap < 0 ? `${formatKES(Math.abs(gap))} under plan` : gap > 0 ? `${formatKES(gap)} over plan` : 'On target'}
                     </p>
                   </div>
                 </div>

@@ -23,7 +23,7 @@ const CATEGORY_KW = {
   data:          ['data','airtime','safaricom'],
 }
 
-function parseQuickEntry(raw, members, tripStartDate) {
+function parseQuickEntry(raw, members, _tripStartDate) {
   const text  = raw.trim()
   const lower = text.toLowerCase()
 
@@ -140,7 +140,16 @@ export default function ExpenseLog() {
   }, [quick, confirmedMembers, state.trip.startDate])
 
   function handleSave(data) {
-    dispatch({ type: 'ADD_EXPENSE', payload: { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...data } })
+    if (sheet.expenseId) {
+      dispatch({ type: 'UPDATE_EXPENSE', payload: { id: sheet.expenseId, ...data } })
+    } else {
+      dispatch({ type: 'ADD_EXPENSE', payload: { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...data } })
+    }
+    setSheet(null)
+  }
+
+  function handleDelete(id) {
+    dispatch({ type: 'DELETE_EXPENSE', payload: id })
     setSheet(null)
   }
 
@@ -227,13 +236,15 @@ export default function ExpenseLog() {
                     const member = confirmedMembers.find(m => m.id === expense.paidBy)
                     const pm     = PAYMENT_METHODS.find(p => p.id === expense.paymentMethod)
                     return (
-                      <motion.div
+                      <motion.button
                         key={expense.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
                         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                        className="flex items-center gap-3 px-4 py-3"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left"
+                        onClick={() => setSheet({ initial: expense, expenseId: expense.id })}
+                        whileTap={{ backgroundColor: 'var(--color-surface-2)' }}
                       >
                         <span className="text-xl w-7 text-center shrink-0">{cat?.icon ?? '📌'}</span>
                         <div className="flex-1 min-w-0">
@@ -259,15 +270,9 @@ export default function ExpenseLog() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-[var(--color-text)] font-semibold text-sm tabular-nums">{formatKES(expense.amount)}</span>
-                          <motion.button
-                            onClick={() => dispatch({ type: 'DELETE_EXPENSE', payload: expense.id })}
-                            className="text-[var(--color-muted)] p-1 rounded-full"
-                            whileTap={{ scale: 0.8 }}
-                          >
-                            <CloseIcon size={14} stroke="currentColor" />
-                          </motion.button>
+                          <span className="text-[var(--color-muted)] text-base leading-none">›</span>
                         </div>
-                      </motion.div>
+                      </motion.button>
                     )
                   })}
                 </AnimatePresence>
@@ -281,9 +286,11 @@ export default function ExpenseLog() {
         {sheet && (
           <AddExpenseSheet
             initial={sheet.initial}
+            expenseId={sheet.expenseId}
             tripStartDate={state.trip.startDate}
             members={confirmedMembers}
             onSave={handleSave}
+            onDelete={handleDelete}
             onClose={() => setSheet(null)}
           />
         )}
@@ -294,14 +301,14 @@ export default function ExpenseLog() {
 
 // ─── Add Expense Sheet ────────────────────────────────────────────────────────
 
-function AddExpenseSheet({ initial, tripStartDate, members, onSave, onClose }) {
+function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
     description:   initial?.description   ?? '',
     amount:        initial?.amount        ?? '',
     category:      initial?.category      ?? 'food',
     date:          initial?.date          ?? format(new Date(), 'yyyy-MM-dd'),
     paidBy:        initial?.paidBy        ?? null,
-    paymentMethod: 'mpesa',
+    paymentMethod: initial?.paymentMethod ?? 'mpesa',
     isPreTrip:     initial?.isPreTrip     ?? false,
     splitBetween:  initial?.splitBetween  ?? members.map(m => m.id),
   })
@@ -333,7 +340,7 @@ function AddExpenseSheet({ initial, tripStartDate, members, onSave, onClose }) {
         </div>
         {/* Header row */}
         <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-[var(--color-border)] shrink-0">
-          <span className="font-semibold text-[var(--color-text)]">Log expense</span>
+          <span className="font-semibold text-[var(--color-text)]">{expenseId ? 'Edit expense' : 'Log expense'}</span>
           <motion.button onClick={onClose} className="text-[var(--color-muted)] p-1"
             whileTap={{ scale: 0.85, rotate: 90 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
             <CloseIcon size={20} stroke="currentColor" />
@@ -443,6 +450,12 @@ function AddExpenseSheet({ initial, tripStartDate, members, onSave, onClose }) {
             </div>
           )}
 
+          {members.length > 0 && form.paidBy === null && (
+            <p className="text-[var(--color-warning)] text-[10px] -mt-2 px-1">
+              ⚡ Settle Up won't track who paid this — tap a name above to credit them
+            </p>
+          )}
+
           {/* Split between */}
           {members.length > 1 && (
             <div>
@@ -502,7 +515,7 @@ function AddExpenseSheet({ initial, tripStartDate, members, onSave, onClose }) {
         </div>
 
         {/* Save — always visible */}
-        <div className="px-5 py-3 shrink-0 border-t border-[var(--color-border)]">
+        <div className="px-5 py-3 shrink-0 border-t border-[var(--color-border)] space-y-2">
           <motion.button
             onClick={() => canSave && onSave({ ...form, amount: Number(form.amount) })}
             className="w-full py-4 rounded-2xl font-semibold text-base"
@@ -513,8 +526,18 @@ function AddExpenseSheet({ initial, tripStartDate, members, onSave, onClose }) {
             whileTap={canSave ? { scale: 0.96 } : {}}
             transition={{ type: 'spring', stiffness: 500, damping: 25 }}
           >
-            Save expense
+            {expenseId ? 'Save changes' : 'Save expense'}
           </motion.button>
+          {expenseId && (
+            <motion.button
+              onClick={() => onDelete(expenseId)}
+              className="w-full py-3 rounded-2xl text-[var(--color-danger)] text-sm font-medium"
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            >
+              Delete expense
+            </motion.button>
+          )}
         </div>
       </motion.div>
     </>

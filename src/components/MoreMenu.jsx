@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SetupIcon, MembersIcon, SettleIcon, ChecklistIcon, VaultIcon, CloseIcon, ShareIcon, HomeIcon, LogOutIcon } from './icons'
+import { SetupIcon, PlanIcon, AffordIcon, ChecklistIcon, VaultIcon, CloseIcon, ShareIcon, HomeIcon, LogOutIcon } from './icons'
 import { useTrip } from '../context/TripContext'
 import { useAuth } from '../context/AuthContext'
 import { encodeSharePayload } from '../screens/ShareView'
 
 const items = [
   { to: '/setup', Icon: SetupIcon, label: 'Trip Setup', desc: 'Dates, budget, transport' },
-  { to: '/members', Icon: MembersIcon, label: 'Members', desc: "Who's confirmed" },
-  { to: '/settle', Icon: SettleIcon, label: 'Settle Up', desc: 'End-of-trip debts' },
+  { to: '/itinerary', Icon: PlanIcon, label: 'Plan', desc: 'Itinerary & daily schedule' },
+  { to: '/afford', Icon: AffordIcon, label: 'Afford?', desc: 'Can the group afford it?' },
   { to: '/checklist', Icon: ChecklistIcon, label: 'Checklist', desc: 'Pre-trip tasks' },
   { to: '/docs', Icon: VaultIcon, label: 'Documents', desc: 'SGR refs, tickets, contacts' },
 ]
