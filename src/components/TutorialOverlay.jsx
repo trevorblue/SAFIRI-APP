@@ -1,58 +1,70 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { markTutorialSeen } from '../lib/tutorial'
 
+const GAP      = 16   // px between tooltip bottom and spotlight top
+const PAD      = 10   // px padding around highlighted element
+const TIP_W    = 272  // tooltip width
+
 const STEPS = [
   {
-    icon: '🗓',
-    title: 'Set up your trip',
-    desc: 'Dates, budget, transport — everything configured in one place. Find it any time under Trip Setup.',
-    action: 'Trip Setup → More menu',
+    target: '[data-tour="fab"]',
+    circle: true,
+    title: 'Log an expense',
+    desc: 'Tap + any time to record a spend — amount, category, who paid, split between members.',
   },
   {
-    icon: '👥',
-    title: 'Add your group',
-    desc: 'Add every traveller under Members. Each person gets their own budget and spending tracker.',
-    action: 'Members tab → bottom nav',
+    target: '[data-tour="tab-budget"]',
+    title: 'Budget dashboard',
+    desc: 'Live overview of total spent vs budget, today\'s burn rate, and spend by category.',
   },
   {
-    icon: '🧾',
-    title: 'Log expenses',
-    desc: 'Tap + to record a spend. Split it between members and tag who paid — Settle Up uses this.',
-    action: '+ button → centre tab',
+    target: '[data-tour="tab-members"]',
+    title: 'Group members',
+    desc: 'Add every traveller, set individual budgets, and track who\'s contributed what.',
   },
   {
-    icon: '✅',
-    title: 'Settle Up at the end',
-    desc: "See who paid more than their share and who owes who. One screen, no spreadsheets.",
-    action: 'Settle tab → bottom nav',
+    target: '[data-tour="tab-settle"]',
+    title: 'Settle Up',
+    desc: 'At trip end — see the exact transfers so everyone ends even. No spreadsheet needed.',
+  },
+  {
+    target: '[data-tour="tab-more"]',
+    title: 'More features',
+    desc: 'Itinerary planner, checklist, document vault, trip setup — and replay this tour.',
   },
 ]
 
-const slideVariants = {
-  enter: dir => ({ x: dir > 0 ? '60%' : '-60%', opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit: dir => ({ x: dir > 0 ? '-60%' : '60%', opacity: 0 }),
-}
+export default function TourOverlay({ onClose }) {
+  const [step, setStep]     = useState(0)
+  const [spot, setSpot]     = useState(null)   // { x, y, w, h, cx, cy }
+  const [vp,   setVp]       = useState({ W: window.innerWidth, H: window.innerHeight })
 
-export default function TutorialOverlay({ onClose }) {
-  const [step, setStep] = useState(0)
-  const [dir, setDir]   = useState(1)
+  const current = STEPS[step]
+
+  const measure = useCallback(() => {
+    const W  = window.innerWidth
+    const H  = window.innerHeight
+    setVp({ W, H })
+    const el = document.querySelector(current.target)
+    if (!el) { setSpot(null); return }
+    const r  = el.getBoundingClientRect()
+    const x  = r.left - PAD
+    const y  = r.top  - PAD
+    const w  = r.width  + PAD * 2
+    const h  = r.height + PAD * 2
+    setSpot({ x, y, w, h, cx: x + w / 2, cy: y + h / 2 })
+  }, [current.target])
+
+  useEffect(() => {
+    const id = setTimeout(measure, 55)
+    window.addEventListener('resize', measure)
+    return () => { clearTimeout(id); window.removeEventListener('resize', measure) }
+  }, [measure])
 
   function next() {
-    if (step < STEPS.length - 1) {
-      setDir(1)
-      setStep(s => s + 1)
-    } else {
-      dismiss()
-    }
-  }
-
-  function prev() {
-    if (step > 0) {
-      setDir(-1)
-      setStep(s => s - 1)
-    }
+    if (step < STEPS.length - 1) setStep(s => s + 1)
+    else dismiss()
   }
 
   function dismiss() {
@@ -60,126 +72,155 @@ export default function TutorialOverlay({ onClose }) {
     onClose()
   }
 
-  const current = STEPS[step]
-  const isLast  = step === STEPS.length - 1
+  const { W, H } = vp
+  const isLast   = step === STEPS.length - 1
+
+  /* ── Spotlight shape ── */
+  const rx = spot ? (current.circle ? Math.min(spot.w, spot.h) / 2 : 14) : 0
+
+  /* ── Tooltip placement — always above the spotlight (tab bar is at bottom) ── */
+  const rawLeft      = spot ? spot.cx - TIP_W / 2 : (W - TIP_W) / 2
+  const tipLeft      = Math.max(16, Math.min(W - TIP_W - 16, rawLeft))
+  const tipCX        = tipLeft + TIP_W / 2
+  const tipBottomY   = spot ? spot.y - GAP : H / 2   // tooltip's bottom edge in screen px from top
+  const cssBottom    = H - tipBottomY                  // CSS bottom value
+
+  /* ── Curved arrow: tooltip bottom-centre → spotlight top-centre ── */
+  const ax1 = tipCX
+  const ay1 = tipBottomY
+  const ax2 = spot ? spot.cx : W / 2
+  const ay2 = spot ? spot.y + 3 : H / 2   // slightly inside spotlight top
+
+  const dy  = ay2 - ay1
+  const cx1 = ax1 + (ax2 - ax1) * 0.25
+  const cy1 = ay1 + dy * 0.58
+  const cx2 = ax2 - (ax2 - ax1) * 0.25
+  const cy2 = ay2 - dy * 0.32
+
+  /* ── Arrowhead ── */
+  const angle = Math.atan2(ay2 - cy2, ax2 - cx2)
+  const aLen  = 9
+  const f     = (n) => n.toFixed(2)
+  const tip   = `${f(ax2)},${f(ay2)}`
+  const w1    = `${f(ax2 - aLen * Math.cos(angle - 0.42))},${f(ay2 - aLen * Math.sin(angle - 0.42))}`
+  const w2    = `${f(ax2 - aLen * Math.cos(angle + 0.42))},${f(ay2 - aLen * Math.sin(angle + 0.42))}`
+
+  const trans = 'x 0.33s,y 0.33s,width 0.33s,height 0.33s,rx 0.33s,ry 0.33s'
 
   return (
-    <>
-      {/* Backdrop */}
-      <motion.div
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.22 }}
-        onClick={dismiss}
-      />
+    <div className="fixed inset-0 z-50" style={{ pointerEvents: 'none' }}>
 
-      {/* Card */}
-      <motion.div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 pb-[env(safe-area-inset-bottom,20px)]"
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 360, damping: 32 }}
-      >
-        <div className="mx-3 mb-3 bg-[var(--color-surface)] rounded-3xl border border-[var(--color-border)] overflow-hidden">
-          {/* Drag handle */}
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 rounded-full bg-[var(--color-border-strong)]" />
-          </div>
+      {/* ── SVG overlay ── */}
+      <svg width={W} height={H} className="absolute inset-0" style={{ overflow: 'visible' }}>
+        <defs>
+          <mask id="tour-mask">
+            <rect width={W} height={H} fill="white" />
+            {spot && (
+              <rect
+                x={spot.x} y={spot.y} width={spot.w} height={spot.h}
+                rx={rx}    ry={rx}
+                fill="black"
+                style={{ transition: trans }}
+              />
+            )}
+          </mask>
+        </defs>
 
-          {/* Header row */}
-          <div className="flex items-center justify-between px-5 pt-1 pb-2">
-            <span className="text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">
-              Quick tour
-            </span>
-            <motion.button
-              onClick={dismiss}
-              className="text-[var(--color-muted)] text-xs font-medium px-2.5 py-1 rounded-full border border-[var(--color-border)]"
-              whileTap={{ scale: 0.9 }}
-            >
-              Skip
-            </motion.button>
-          </div>
+        {/* Dark scrim with hole */}
+        <rect width={W} height={H} fill="rgba(0,0,0,0.78)" mask="url(#tour-mask)" />
 
-          {/* Step content — slides */}
-          <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
-            <AnimatePresence custom={dir} mode="wait" initial={false}>
-              <motion.div
-                key={step}
-                custom={dir}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ type: 'spring', stiffness: 360, damping: 32 }}
-                className="px-6 pb-6 pt-2"
-              >
-                {/* Icon */}
-                <motion.div
-                  className="flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--color-primary-dim)] border border-[color:var(--color-primary)]/20 mb-5"
-                  initial={{ scale: 0.7, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.06, type: 'spring', stiffness: 400, damping: 24 }}
+        {/* Spotlight glow ring */}
+        {spot && (
+          <rect
+            x={spot.x - 1.5} y={spot.y - 1.5}
+            width={spot.w + 3} height={spot.h + 3}
+            rx={rx + 1.5}     ry={rx + 1.5}
+            fill="none"
+            stroke="rgba(255,255,255,0.28)"
+            strokeWidth="2"
+            style={{ transition: trans }}
+          />
+        )}
+
+        {/* Curved arrow */}
+        {spot && (
+          <g opacity="0.92">
+            <path
+              d={`M ${f(ax1)} ${f(ay1)} C ${f(cx1)} ${f(cy1)} ${f(cx2)} ${f(cy2)} ${f(ax2)} ${f(ay2)}`}
+              stroke="white"
+              strokeWidth="2.2"
+              fill="none"
+              strokeLinecap="round"
+            />
+            <polygon points={`${tip} ${w1} ${w2}`} fill="white" />
+          </g>
+        )}
+      </svg>
+
+      {/* ── Tooltip ── */}
+      <AnimatePresence mode="wait">
+        {spot && (
+          <motion.div
+            key={step}
+            className="absolute"
+            style={{ left: tipLeft, bottom: cssBottom, width: TIP_W, pointerEvents: 'auto' }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 5 }}
+            transition={{ type: 'spring', stiffness: 440, damping: 32 }}
+          >
+            <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl overflow-hidden">
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 pt-4 pb-0">
+                <span className="text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-widest">
+                  {step + 1} of {STEPS.length}
+                </span>
+                <button
+                  onClick={dismiss}
+                  className="text-[var(--color-muted)] text-xs font-medium py-1"
                 >
-                  <span className="text-4xl leading-none">{current.icon}</span>
-                </motion.div>
+                  Skip tour
+                </button>
+              </div>
 
-                {/* Text */}
-                <p className="text-[var(--color-text)] text-xl font-bold mb-2">{current.title}</p>
-                <p className="text-[var(--color-muted)] text-sm leading-relaxed mb-4">{current.desc}</p>
+              {/* Body */}
+              <div className="px-4 pt-2.5 pb-3">
+                <p className="text-[var(--color-text)] text-base font-bold mb-1.5">{current.title}</p>
+                <p className="text-[var(--color-muted)] text-sm leading-relaxed">{current.desc}</p>
+              </div>
 
-                {/* Action hint */}
-                <div className="inline-flex items-center gap-1.5 bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-full px-3 py-1.5">
-                  <span className="text-[var(--color-primary)] text-[10px] font-semibold uppercase tracking-wide">
-                    {current.action}
-                  </span>
+              {/* Footer */}
+              <div className="flex items-center justify-between px-4 pb-4">
+                <div className="flex gap-1.5 items-center">
+                  {STEPS.map((_, i) => (
+                    <motion.span
+                      key={i}
+                      className="block h-1.5 rounded-full"
+                      animate={{
+                        width: i === step ? 16 : 5,
+                        backgroundColor: i <= step
+                          ? 'var(--color-primary)'
+                          : 'var(--color-surface-3)',
+                      }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                    />
+                  ))}
                 </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
 
-          {/* Footer nav */}
-          <div className="flex items-center justify-between px-5 pb-5 pt-1">
-            {/* Back */}
-            <motion.button
-              onClick={prev}
-              className="text-[var(--color-muted)] text-sm font-medium w-16 text-left"
-              style={{ opacity: step === 0 ? 0 : 1, pointerEvents: step === 0 ? 'none' : 'auto' }}
-              whileTap={{ scale: 0.9 }}
-            >
-              Back
-            </motion.button>
-
-            {/* Dots */}
-            <div className="flex gap-1.5">
-              {STEPS.map((_, i) => (
                 <motion.button
-                  key={i}
-                  onClick={() => { setDir(i > step ? 1 : -1); setStep(i) }}
-                  animate={{
-                    width: i === step ? 20 : 6,
-                    backgroundColor: i === step ? 'var(--color-primary)' : 'var(--color-surface-3)',
-                  }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className="h-1.5 rounded-full"
-                />
-              ))}
+                  onClick={next}
+                  className="px-4 py-2 rounded-full text-sm font-semibold"
+                  style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-bg)' }}
+                  whileTap={{ scale: 0.93 }}
+                >
+                  {isLast ? 'Done ✓' : 'Next →'}
+                </motion.button>
+              </div>
             </div>
-
-            {/* Next / Done */}
-            <motion.button
-              onClick={next}
-              className="w-16 text-right text-sm font-semibold"
-              style={{ color: 'var(--color-primary)' }}
-              whileTap={{ scale: 0.9 }}
-            >
-              {isLast ? 'Done' : 'Next'}
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
-    </>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

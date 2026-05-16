@@ -9,10 +9,10 @@ import { hasTutorialBeenSeen } from '../lib/tutorial'
 import { BudgetIcon, MembersIcon, SettleIcon, MoreIcon, AddIcon } from './icons'
 
 const TABS = [
-  { to: '/', Icon: BudgetIcon, label: 'Budget' },
-  { to: '/members', Icon: MembersIcon, label: 'Members' },
+  { to: '/', Icon: BudgetIcon,  label: 'Budget',  tourId: 'tab-budget'  },
+  { to: '/members', Icon: MembersIcon, label: 'Members', tourId: 'tab-members' },
   null,
-  { to: '/settle', Icon: SettleIcon, label: 'Settle' },
+  { to: '/settle', Icon: SettleIcon, label: 'Settle', tourId: 'tab-settle' },
 ]
 
 export default function Layout({ onExitTrip }) {
@@ -77,7 +77,7 @@ export default function Layout({ onExitTrip }) {
                   whileTap={{ scale: 0.88 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
                 >
-                  <span className="w-14 h-14 rounded-full bg-[var(--color-primary)] flex items-center justify-center shadow-lg shadow-[color:var(--color-primary)]/30">
+                  <span data-tour="fab" className="w-14 h-14 rounded-full bg-[var(--color-primary)] flex items-center justify-center shadow-lg shadow-[color:var(--color-primary)]/30">
                     <AddIcon size={26} stroke="var(--color-bg)" />
                   </span>
                   <span className="text-[10px] text-[var(--color-muted)]">Add</span>
@@ -85,13 +85,14 @@ export default function Layout({ onExitTrip }) {
               )
             }
 
-            const { to, Icon, label } = tab
+            const { to, Icon, label, tourId } = tab
 
             return (
               <NavLink
                 key={to}
                 to={to}
                 end={to === '/'}
+                data-tour={tourId}
                 className="relative flex flex-col items-center gap-1 py-1 px-3"
               >
                 {({ isActive }) => (
@@ -128,6 +129,7 @@ export default function Layout({ onExitTrip }) {
           })}
 
           <motion.button
+            data-tour="tab-more"
             onClick={() => setShowMore(true)}
             className="flex flex-col items-center gap-1 py-1 px-3 text-[var(--color-muted)]"
             whileTap={{ scale: 0.88 }}
