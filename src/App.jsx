@@ -53,7 +53,7 @@ function AppShell() {
   // 'home' | 'onboarding' | 'trip'
   const [view, setView] = useState('home')
   const { session } = useAuth()
-  const { state } = useTrip()
+  const { state, dispatch } = useTrip()
 
   // After onboarding completes, return to Home so the new trip card is visible
   useEffect(() => {
@@ -82,7 +82,10 @@ function AppShell() {
         <Home
           key="home"
           onEnterTrip={() => setView('trip')}
-          onCreateTrip={() => setView('onboarding')}
+          onCreateTrip={() => {
+            dispatch({ type: 'RESET' })
+            setView('onboarding')
+          }}
         />
       )}
     </AnimatePresence>

@@ -89,6 +89,7 @@ export default function Dashboard() {
           </motion.button>
 
           <motion.button
+            data-tour="dash-pax"
             onClick={() => navigate('/members')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-surface-2)] text-[var(--color-muted-2)] text-xs shrink-0"
             whileTap={{ scale: 0.93 }}
@@ -116,6 +117,7 @@ export default function Dashboard() {
 
       {/* Main budget card */}
       <motion.div
+        data-tour="dash-budget-card"
         variants={fadeUp}
         className="mx-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mb-4"
       >
@@ -174,6 +176,7 @@ export default function Dashboard() {
 
       {/* Daily budget card */}
       <motion.div
+        data-tour="dash-daily-card"
         variants={fadeUp}
         className="mx-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mb-4"
       >
@@ -297,7 +300,7 @@ export default function Dashboard() {
       )}
 
       {/* Quick actions */}
-      <motion.div variants={fadeUp} className="mx-4 mb-4">
+      <motion.div data-tour="dash-quick" variants={fadeUp} className="mx-4 mb-4">
         <p className="text-[var(--color-muted)] text-xs uppercase tracking-widest font-medium mb-3 px-1">
           Quick actions
         </p>
@@ -326,7 +329,7 @@ export default function Dashboard() {
 
       {/* Category breakdown */}
       {activeCategories.length > 0 && (
-        <motion.div variants={fadeUp} className="mx-4 mb-6">
+        <motion.div data-tour="dash-category" variants={fadeUp} className="mx-4 mb-6">
           <div className="w-full flex items-center justify-between mb-3 px-1">
             <motion.button
               onClick={() => navigate('/expenses')}

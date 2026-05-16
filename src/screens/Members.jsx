@@ -88,6 +88,7 @@ export default function Members() {
 
       {confirmedMembers.length > 0 && (
         <motion.div
+          data-tour="pool-analysis"
           variants={fadeUp}
           className="mx-4 mb-4 p-4 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] space-y-3"
         >
@@ -147,6 +148,7 @@ export default function Members() {
             return (
               <motion.div
                 key={member.id}
+                data-tour="member-card"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20, scale: 0.95 }}
@@ -183,7 +185,7 @@ export default function Members() {
                 </div>
 
                 {/* Budget stats — SHARE (not Spent) */}
-                <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+                <div data-tour="member-stats" className="grid grid-cols-3 gap-2 mb-3 text-center">
                   {[
                     { label: 'Budget',                    value: formatKES(budget),            color: 'text-[var(--color-text)]'    },
                     { label: 'Share',                     value: formatKES(share),             color: 'text-[var(--color-text)]'    },
@@ -213,7 +215,7 @@ export default function Members() {
                 </p>
 
                 {/* Cash put in row */}
-                <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
+                <div data-tour="member-cash" className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
                   <div className="flex items-center gap-2">
                     <WalletIcon size={12} stroke="var(--color-muted)" />
                     <span className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide">Cash put in</span>
@@ -293,6 +295,7 @@ export default function Members() {
 
         {/* Add member button */}
         <motion.button
+          data-tour="members-add"
           onClick={() => setShowAdd(true)}
           className="w-full py-4 rounded-2xl border border-dashed border-[var(--color-border)] text-[var(--color-muted)] text-sm flex items-center justify-center gap-2 mt-1"
           whileTap={{ scale: 0.97 }}
