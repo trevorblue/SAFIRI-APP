@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, differenceInCalendarDays } from 'date-fns'
-import { useNavigate } from 'react-router-dom'
 import { useTrip } from '../context/TripContext'
 import { formatKES, ACTIVITY_LIBRARY, AREA_COLORS, TIME_OF_DAY } from '../lib/constants'
 import { CloseIcon, PencilIcon, ZapIcon } from '../components/icons'
@@ -35,8 +34,7 @@ const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.06, de
 const fadeUp  = { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 28 } } }
 
 export default function Itinerary() {
-  const { state, dispatch } = useTrip()
-  const navigate = useNavigate()
+  const { state, dispatch, computed } = useTrip()
   const { trip, itinerary } = state
 
   const dates    = [...new Set(itinerary.map(i => i.date))].sort()
@@ -58,7 +56,28 @@ export default function Itinerary() {
   const donePct   = itinerary.length > 0 ? Math.round((doneCount / itinerary.length) * 100) : 0
 
   function toggleStatus(item) {
-    dispatch({ type: 'UPDATE_ITINERARY_ITEM', payload: { id: item.id, status: STATUS_NEXT[item.status] ?? 'planned' } })
+    const nextStatus = STATUS_NEXT[item.status] ?? 'planned'
+    dispatch({ type: 'UPDATE_ITINERARY_ITEM', payload: { id: item.id, status: nextStatus } })
+    if (nextStatus === 'done') {
+      const info = getInfo(item)
+      if (info.cost > 0) {
+        const confirmedIds = state.members.filter(m => m.status === 'confirmed').map(m => m.id)
+        dispatch({
+          type: 'ADD_EXPENSE',
+          payload: {
+            id:            crypto.randomUUID(),
+            createdAt:     new Date().toISOString(),
+            description:   info.name,
+            amount:        info.cost * computed.memberCount,
+            category:      'activities',
+            date:          item.date,
+            isPreTrip:     false,
+            fromItinerary: true,
+            splitBetween:  confirmedIds,
+          },
+        })
+      }
+    }
   }
 
   return (
@@ -210,18 +229,6 @@ export default function Itinerary() {
                         )}
                         {item.notes && (
                           <span className="text-[var(--color-muted)] text-[10px] truncate max-w-[100px]">· {item.notes}</span>
-                        )}
-                        {info.cost > 0 && (
-                          <motion.button
-                            onClick={() => navigate(
-                              `/expenses?add=true&amount=${info.cost}&desc=${encodeURIComponent(info.name)}&date=${item.date}`
-                            )}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-full text-[var(--color-success)] bg-[var(--color-success-dim)]"
-                            whileTap={{ scale: 0.88 }}
-                            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                          >
-                            Log →
-                          </motion.button>
                         )}
                         {item.status === 'cancelled' && (
                           <motion.button

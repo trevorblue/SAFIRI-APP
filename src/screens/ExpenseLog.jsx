@@ -1,7 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, subDays, isToday, isYesterday } from 'date-fns'
-import { useSearchParams } from 'react-router-dom'
 import { useTrip } from '../context/TripContext'
 import { formatKES, EXPENSE_CATEGORIES, PAYMENT_METHODS } from '../lib/constants'
 import { CloseIcon } from '../components/icons'
@@ -53,8 +52,6 @@ function parseQuickEntry(raw, members, tripStartDate) {
     if (dm) date = `2026-${String(dm[2]).padStart(2, '0')}-${String(dm[1]).padStart(2, '0')}`
   }
 
-  const isPreTrip = date < tripStartDate
-
   // Category
   let category = 'other'
   for (const [cat, kws] of Object.entries(CATEGORY_KW)) {
@@ -76,7 +73,7 @@ function parseQuickEntry(raw, members, tripStartDate) {
   for (const m of members) desc = desc.replace(new RegExp(`\\b${m.name}\\b`, 'gi'), '').trim()
   desc = desc.replace(/\s+/g, ' ').trim() || text.trim()
 
-  return { description: desc, amount: amtObj?.val ?? null, category, date, isPreTrip, paidBy }
+  return { description: desc, amount: amtObj?.val ?? null, category, date, paidBy }
 }
 
 // ─── Grouping + labels ───────────────────────────────────────────────────────
@@ -111,26 +108,9 @@ const fadeUp  = { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, tr
 
 export default function ExpenseLog() {
   const { state, dispatch } = useTrip()
-  const [searchParams, setSearchParams] = useSearchParams()
   const [quick, setQuick] = useState('')
   const [sheet, setSheet] = useState(null)
   const [parsing, setParsing] = useState(false)
-
-  // Open pre-filled sheet when navigated from itinerary "Log →" button
-  useEffect(() => {
-    if (searchParams.get('add') === 'true') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSheet({
-        initial: {
-          amount:      searchParams.get('amount') ? Number(searchParams.get('amount')) : '',
-          description: decodeURIComponent(searchParams.get('desc') ?? ''),
-          date:        searchParams.get('date') ?? format(new Date(), 'yyyy-MM-dd'),
-          category:    'activities',
-        },
-      })
-      setSearchParams({}, { replace: true })
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const confirmedMembers = state.members.filter(m => m.status === 'confirmed')
   const groups     = useMemo(() => groupExpenses(state.expenses), [state.expenses])
@@ -259,6 +239,11 @@ export default function ExpenseLog() {
                         <div className="flex-1 min-w-0">
                           <p className="text-[var(--color-text)] text-sm font-medium truncate">{expense.description}</p>
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            {expense.fromItinerary && (
+                              <span className="text-[10px] text-[var(--color-success)] bg-[var(--color-success-dim)] px-1.5 py-0.5 rounded-full">
+                                planned
+                              </span>
+                            )}
                             {member && (
                               <span className="text-[10px] text-[var(--color-primary)] bg-[var(--color-primary-dim)] px-1.5 py-0.5 rounded-full">
                                 {member.name}
