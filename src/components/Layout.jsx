@@ -16,7 +16,7 @@ const TABS = [
   { to: '/settle', Icon: SettleIcon, label: 'Settle', tourId: 'tab-settle' },
 ]
 
-export default function Layout({ onExitTrip }) {
+export default function Layout({ onExitTrip, onCompleteTrip }) {
   const { computed } = useTrip()
   const online = useOnlineStatus()
   const [showMore, setShowMore]         = useState(false)
@@ -177,6 +177,7 @@ export default function Layout({ onExitTrip }) {
           <MoreMenu
             onClose={() => setShowMore(false)}
             onExitTrip={onExitTrip}
+            onCompleteTrip={onCompleteTrip}
             onShowTutorial={() => { setShowMore(false); setShowTutorial(true) }}
           />
         )}

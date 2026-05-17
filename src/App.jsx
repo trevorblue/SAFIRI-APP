@@ -27,11 +27,11 @@ if (new URLSearchParams(window.location.search).get('seed') === '1') {
   seedDemoData()
 }
 
-function AppRoutes({ onExitTrip }) {
+function AppRoutes({ onExitTrip, onCompleteTrip }) {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Layout onExitTrip={onExitTrip} />}>
+        <Route element={<Layout onExitTrip={onExitTrip} onCompleteTrip={onCompleteTrip} />}>
           <Route index element={<Dashboard />} />
           <Route path="itinerary" element={<Itinerary />} />
           <Route path="expenses" element={<ExpenseLog />} />
@@ -92,6 +92,17 @@ function AppShell() {
     setView('home')
   }
 
+  function handleCompleteTrip() {
+    if (state.tripDbId) {
+      archiveTrip(state.tripDbId, {
+        archivedTotalSpent:  computed.totalSpent,
+        archivedMemberCount: computed.confirmedMembers.length,
+      })
+    }
+    dispatch({ type: 'RESET' })
+    setView('home')
+  }
+
   return (
     <AnimatePresence mode="wait">
       {/* Keep splash visible until animation ends AND auth has resolved */}
@@ -109,7 +120,7 @@ function AppShell() {
           onCancel={handleCancel}
         />
       ) : view === 'trip' && state.setupComplete ? (
-        <AppRoutes key="app" onExitTrip={() => setView('home')} />
+        <AppRoutes key="app" onExitTrip={() => setView('home')} onCompleteTrip={handleCompleteTrip} />
       ) : (
         <Home
           key="home"

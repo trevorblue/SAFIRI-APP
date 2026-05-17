@@ -5,6 +5,7 @@ import { SetupIcon, PlanIcon, AffordIcon, ChecklistIcon, VaultIcon, CloseIcon, S
 import { useTrip } from '../context/TripContext'
 import { useAuth } from '../context/AuthContext'
 import { encodeSharePayload } from '../screens/ShareView'
+import { formatKES } from '../lib/constants'
 
 const items = [
   { to: '/setup', Icon: SetupIcon, label: 'Trip Setup', desc: 'Dates, budget, transport' },
@@ -22,11 +23,94 @@ const itemVariants = {
   }),
 }
 
-export default function MoreMenu({ onClose, onExitTrip, onShowTutorial }) {
+function CompleteTripSheet({ onConfirm, onClose }) {
+  const { state, computed } = useTrip()
+  const { trip } = state
+  const { totalSpent, totalBudget, confirmedMembers } = computed
+  const saved         = totalBudget - totalSpent
+  const costPerPerson = confirmedMembers.length > 0
+    ? Math.round(totalSpent / confirmedMembers.length)
+    : null
+
+  return (
+    <>
+      <motion.div
+        className="fixed inset-0 z-[60] bg-black/60"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-[var(--color-surface)] rounded-t-3xl border-t border-[var(--color-border)] z-[60] pb-[env(safe-area-inset-bottom,24px)]"
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+      >
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-[var(--color-border-strong)]" />
+        </div>
+        <div className="px-5 pt-4 pb-6">
+          <div className="text-center mb-6">
+            <p className="text-5xl mb-3">🏁</p>
+            <p className="text-[var(--color-text)] font-bold text-xl mb-0.5">Complete trip?</p>
+            <p className="text-[var(--color-muted)] text-sm">
+              {trip.name}{trip.destination ? ` · ${trip.destination}` : ''}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-5">
+            <div className="bg-[var(--color-surface-2)] rounded-xl p-3 text-center">
+              <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide mb-0.5">Total spent</p>
+              <p className="text-[var(--color-text)] font-bold text-lg tabular-nums">{formatKES(totalSpent)}</p>
+            </div>
+            <div className="bg-[var(--color-surface-2)] rounded-xl p-3 text-center">
+              <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide mb-0.5">Budget</p>
+              <p className="text-[var(--color-text)] font-bold text-lg tabular-nums">{formatKES(totalBudget)}</p>
+            </div>
+            {costPerPerson !== null && (
+              <div className="bg-[var(--color-surface-2)] rounded-xl p-3 text-center">
+                <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide mb-0.5">Per person</p>
+                <p className="text-[var(--color-text)] font-bold text-lg tabular-nums">{formatKES(costPerPerson)}</p>
+              </div>
+            )}
+            <div className={`rounded-xl p-3 text-center ${saved >= 0 ? 'bg-[var(--color-success-dim)]' : 'bg-[var(--color-danger-dim)]'}`}>
+              <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide mb-0.5">
+                {saved >= 0 ? 'Saved' : 'Over budget'}
+              </p>
+              <p className={`font-bold text-lg tabular-nums ${saved >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
+                {formatKES(Math.abs(saved))}
+              </p>
+            </div>
+          </div>
+
+          <p className="text-[var(--color-muted)] text-xs text-center mb-5 px-2">
+            This archives the trip and moves it to history. You can still view it on the home screen.
+          </p>
+
+          <motion.button
+            onClick={onConfirm}
+            className="w-full py-4 rounded-2xl bg-[var(--color-danger)] text-white font-semibold text-base mb-3"
+            whileTap={{ scale: 0.97 }}
+          >
+            Complete &amp; archive
+          </motion.button>
+          <motion.button
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl text-[var(--color-muted)] text-sm font-medium"
+            whileTap={{ scale: 0.97 }}
+          >
+            Not yet
+          </motion.button>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+export default function MoreMenu({ onClose, onExitTrip, onCompleteTrip, onShowTutorial }) {
   const navigate  = useNavigate()
   const { state, computed } = useTrip()
   const { user, signOut } = useAuth()
-  const [copied, setCopied] = useState(false)
+  const [copied,       setCopied]       = useState(false)
+  const [showComplete, setShowComplete] = useState(false)
 
   function go(to) {
     navigate(to)
@@ -179,6 +263,28 @@ export default function MoreMenu({ onClose, onExitTrip, onShowTutorial }) {
             </AnimatePresence>
           </motion.button>
 
+          {/* Complete trip */}
+          {onCompleteTrip && (
+            <>
+              <div className="mx-5 my-2 border-t border-[var(--color-border)]" />
+              <motion.button
+                variants={itemVariants}
+                custom={items.length + 3}
+                initial="hidden"
+                animate="visible"
+                onClick={() => setShowComplete(true)}
+                className="w-full flex items-center gap-4 px-5 py-3.5 text-left"
+                whileTap={{ backgroundColor: 'var(--color-surface-2)', scale: 0.99 }}
+              >
+                <span className="text-lg leading-none w-5 text-center">🏁</span>
+                <div>
+                  <div className="text-[var(--color-danger)] text-sm font-medium">Complete trip</div>
+                  <div className="text-[var(--color-muted)] text-xs">Archive and move to history</div>
+                </div>
+              </motion.button>
+            </>
+          )}
+
           {/* Account section */}
           <div className="mx-5 my-2 border-t border-[var(--color-border)]" />
           <div className="px-5 py-2 flex items-center justify-between">
@@ -197,6 +303,15 @@ export default function MoreMenu({ onClose, onExitTrip, onShowTutorial }) {
           </div>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {showComplete && (
+          <CompleteTripSheet
+            onClose={() => setShowComplete(false)}
+            onConfirm={() => { setShowComplete(false); onClose(); onCompleteTrip() }}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }
