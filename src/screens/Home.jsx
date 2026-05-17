@@ -207,6 +207,7 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
 
   useEffect(() => {
     if (!user?.id) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingHistory(true)
     fetchAllUserTrips(user.id).then(trips => {
       setPastTrips(trips.filter(t => t.status === 'complete'))

@@ -16,7 +16,7 @@ export default function AnimatedNumber({ value, prefix = '', className = '' }) {
     })
     prev.current = value
     return controls.stop
-  }, [value])
+  }, [value, mv])
 
   return <motion.span className={className}>{display}</motion.span>
 }

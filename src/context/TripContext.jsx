@@ -251,7 +251,6 @@ export function TripProvider({ children }) {
         if (refreshed) dispatch({ type: 'LOAD_FROM_DB', payload: refreshed })
       }
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
   // Create trip in Supabase when setup completes (or after migration from localStorage-only)
