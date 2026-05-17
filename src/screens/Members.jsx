@@ -305,17 +305,15 @@ export default function Members() {
         )}
 
         {/* Invite via WhatsApp */}
-        {state.tripDbId && (
-          <motion.button
-            onClick={() => setShowInvite(true)}
-            className="w-full py-3.5 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/8 text-[#25D366] text-sm font-medium flex items-center justify-center gap-2 mt-1"
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          >
+        <motion.button
+          onClick={() => setShowInvite(true)}
+          className="w-full py-3.5 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/8 text-[#25D366] text-sm font-medium flex items-center justify-center gap-2 mt-1"
+          whileTap={{ scale: 0.97 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        >
             <span className="text-base">📲</span>
             Share invite link
-          </motion.button>
-        )}
+        </motion.button>
 
         {/* Add member button */}
         <motion.button
@@ -359,6 +357,37 @@ export default function Members() {
 
 function InviteSheet({ trip, tripDbId, onClose }) {
   const [copied, setCopied] = useState(false)
+
+  if (!tripDbId) {
+    return (
+      <>
+        <motion.div className="fixed inset-0 z-50 bg-black/50"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose} />
+        <motion.div
+          className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-[var(--color-surface)] rounded-t-3xl border-t border-[var(--color-border)] z-50 pb-[env(safe-area-inset-bottom,24px)]"
+          initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+          transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+        >
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 rounded-full bg-[var(--color-border-strong)]" />
+          </div>
+          <div className="px-5 py-8 text-center">
+            <p className="text-3xl mb-3">🔗</p>
+            <p className="text-[var(--color-text)] font-semibold mb-2">Trip not yet synced</p>
+            <p className="text-[var(--color-muted)] text-sm mb-6">
+              This trip was created offline. Exit the trip, sign out and back in — the app will sync it to the cloud and the invite link will be ready.
+            </p>
+            <motion.button onClick={onClose}
+              className="w-full py-3.5 rounded-2xl bg-[var(--color-primary)] text-[var(--color-bg)] font-semibold"
+              whileTap={{ scale: 0.96 }}>
+              Got it
+            </motion.button>
+          </div>
+        </motion.div>
+      </>
+    )
+  }
 
   const inviteUrl = `${window.location.origin}/?join=${tripDbId}`
   const dateRange = fmtRange(trip.startDate, trip.endDate)
