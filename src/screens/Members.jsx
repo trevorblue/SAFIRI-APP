@@ -423,7 +423,7 @@ function InviteSheet({ trip, tripDbId, userId, state, dispatch, onClose }) {
   const inviteUrl = `${window.location.origin}/?join=${tripDbId}`
   const dateRange = fmtRange(trip.startDate, trip.endDate)
   const waText    = encodeURIComponent(
-    `Hey! We're going to ${trip.destination || trip.name} 🇰🇪\n` +
+    `Hey! We're going to ${trip.destination || trip.name} ✈️\n` +
     (dateRange ? `📅 ${dateRange}\n` : '') +
     `💰 Budget: KES ${Number(trip.budgetPerPerson).toLocaleString()} per person\n\n` +
     `Track group expenses on Safiri:\n${inviteUrl}`

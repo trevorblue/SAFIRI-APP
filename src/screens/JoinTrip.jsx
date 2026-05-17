@@ -44,7 +44,7 @@ export default function JoinTrip({ tripId, onDone }) {
   function waMessage() {
     const dest = result?.destination || result?.tripName || 'the trip'
     return encodeURIComponent(
-      `Hey! I just joined the ${result?.tripName} group on Safiri — see you in ${dest}! 🇰🇪`
+      `Hey! I just joined the ${result?.tripName} group on Safiri — see you in ${dest}! ✈️`
     )
   }
 
