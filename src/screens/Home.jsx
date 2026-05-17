@@ -483,28 +483,6 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
   const checklistTotal  = (state.checklist ?? []).length
   const checklistPct    = checklistTotal > 0 ? checklistDone / checklistTotal : 0
 
-  function CountdownBadge() {
-    if (d > 0) return (
-      <div className="inline-flex items-center gap-1.5 bg-[var(--color-primary-dim)] text-[var(--color-primary)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
-        <span>🗓</span>
-        <span>{d} day{d !== 1 ? 's' : ''} to {trip.destination?.split(',')[0] || 'trip'}</span>
-      </div>
-    )
-    if (d === 0) return (
-      <div className="inline-flex items-center gap-1.5 bg-[var(--color-success-dim)] text-[var(--color-success)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
-        <span>🎉</span>
-        <span>Trip starts today!</span>
-      </div>
-    )
-    if (computed.tripDaysRemaining > 0) return (
-      <div className="inline-flex items-center gap-1.5 bg-[var(--color-warning-dim)] text-[var(--color-warning)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
-        <span>✈️</span>
-        <span>In progress · {computed.tripDaysRemaining} day{computed.tripDaysRemaining !== 1 ? 's' : ''} left</span>
-      </div>
-    )
-    return null
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -558,7 +536,23 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
             </div>
 
             {/* Countdown */}
-            <CountdownBadge />
+            {d > 0 && (
+              <div className="inline-flex items-center gap-1.5 bg-[var(--color-primary-dim)] text-[var(--color-primary)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
+                <span>🗓</span>
+                <span>{d} day{d !== 1 ? 's' : ''} to {trip.destination?.split(',')[0] || 'trip'}</span>
+              </div>
+            )}
+            {d === 0 && (
+              <div className="inline-flex items-center gap-1.5 bg-[var(--color-success-dim)] text-[var(--color-success)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
+                <span>🎉</span><span>Trip starts today!</span>
+              </div>
+            )}
+            {d < 0 && computed.tripDaysRemaining > 0 && (
+              <div className="inline-flex items-center gap-1.5 bg-[var(--color-warning-dim)] text-[var(--color-warning)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
+                <span>✈️</span>
+                <span>In progress · {computed.tripDaysRemaining} day{computed.tripDaysRemaining !== 1 ? 's' : ''} left</span>
+              </div>
+            )}
 
             {/* Member avatars + group readiness */}
             {computed.confirmedMembers.length > 0 && (
