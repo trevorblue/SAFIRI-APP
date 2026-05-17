@@ -17,15 +17,21 @@ function calcSettlement(expenses, members, memberCount, contributions = []) {
   let total = 0
   for (const e of expenses) {
     total += e.amount
-    if (e.paidBy && paid[e.paidBy] !== undefined) {
+    // Kitty payments come from the shared pool — contributions already cover them.
+    // Only out-of-pocket payments create a personal credit for the payer.
+    if (e.paymentSource !== 'kitty' && e.paidBy && paid[e.paidBy] !== undefined) {
       paid[e.paidBy] += e.amount
     }
     const splitIds = (e.splitBetween?.length > 0)
       ? e.splitBetween.filter(id => owes[id] !== undefined)
       : allMemberIds
     if (splitIds.length > 0) {
-      const share = e.amount / splitIds.length
-      for (const id of splitIds) owes[id] += share
+      if (e.splitMode === 'custom' && e.customSplits) {
+        for (const id of splitIds) owes[id] += Number(e.customSplits[id] ?? 0)
+      } else {
+        const share = e.amount / splitIds.length
+        for (const id of splitIds) owes[id] += share
+      }
     }
   }
 
@@ -49,13 +55,17 @@ function calcSettlement(expenses, members, memberCount, contributions = []) {
         const splitIds = e.splitBetween?.length > 0
           ? e.splitBetween.filter(id => owes[id] !== undefined)
           : allMemberIds
+        const share = (e.splitMode === 'custom' && e.customSplits)
+          ? Number(e.customSplits[m.id] ?? 0)
+          : e.amount / splitIds.length
         return {
           id:          e.id,
           description: e.description,
           date:        e.date,
           category:    e.category,
-          share:       e.amount / splitIds.length,
-          splitCount:  splitIds.length,
+          share,
+          splitCount:  e.splitMode === 'custom' ? null : splitIds.length,
+          fromKitty:   e.paymentSource === 'kitty',
         }
       })
       .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
@@ -94,7 +104,7 @@ export default function SettleUp() {
 
   const { transactions, balances, total, fairShare } = useMemo(
     () => calcSettlement(
-      state.expenses.filter(e => !e.isPreTrip),
+      state.expenses.filter(e => !e.isPreTrip && e.status !== 'pending'),
       computed.confirmedMembers,
       computed.memberCount,
       state.contributions ?? [],
@@ -104,7 +114,7 @@ export default function SettleUp() {
 
   const [expandedId, setExpandedId] = useState(null)
   const [expandedTxId, setExpandedTxId] = useState(null)
-  const hasExpenses = state.expenses.filter(e => !e.isPreTrip).length > 0
+  const hasExpenses = state.expenses.filter(e => !e.isPreTrip && e.status !== 'pending').length > 0
   const hasMembers  = computed.confirmedMembers.length > 0
 
   return (
@@ -202,6 +212,7 @@ export default function SettleUp() {
                                     <p className="text-[var(--color-text)] text-xs font-medium truncate">{c.description}</p>
                                     <p className="text-[var(--color-muted)] text-[10px]">
                                       {dateStr}{c.splitCount > 1 ? ` · ÷${c.splitCount}` : ''}
+                                      {c.fromKitty && <span className="ml-1 text-[var(--color-success)]">· kitty</span>}
                                     </p>
                                   </div>
                                 </div>
@@ -287,6 +298,7 @@ export default function SettleUp() {
                                         <p className="text-[var(--color-text)] text-xs font-medium truncate">{c.description}</p>
                                         <p className="text-[var(--color-muted)] text-[10px]">
                                           {dateStr}{c.splitCount > 1 ? ` · ÷${c.splitCount}` : ''}
+                                          {c.fromKitty && <span className="ml-1 text-[var(--color-success)]">· kitty</span>}
                                         </p>
                                       </div>
                                     </div>

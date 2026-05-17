@@ -315,6 +315,11 @@ export default function ExpenseLog() {
                               </span>
                             )}
                             {pm && <span className="text-[10px] text-[var(--color-muted)]">{pm.label}</span>}
+                            {expense.paymentSource === 'kitty' && (
+                              <span className="text-[10px] text-[var(--color-success)] bg-[var(--color-success-dim)] px-1.5 py-0.5 rounded-full">
+                                kitty
+                              </span>
+                            )}
                             {expense.splitBetween?.length > 0 && expense.splitBetween.length < confirmedMembers.length && (
                               <span className="text-[10px] text-[var(--color-muted)]">
                                 {expense.splitBetween.length}/{confirmedMembers.length} members
@@ -367,6 +372,7 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
     splitBetween:  initial?.splitBetween  ?? members.map(m => m.id),
     splitMode:     initial?.splitMode     ?? 'equal',
     customSplits:  initial?.customSplits  ?? {},
+    paymentSource: initial?.paymentSource ?? 'kitty',
     status:        initial?.status        ?? 'approved',
   })
 
@@ -536,9 +542,42 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
             </div>
           )}
 
-          {members.length > 0 && form.paidBy === null && (
+          {/* Source — kitty vs out of pocket */}
+          <div>
+            <label className="text-[var(--color-muted-2)] text-xs font-medium uppercase tracking-wide mb-2 block">
+              Where did this money come from?
+            </label>
+            <div className="flex gap-2">
+              {[
+                { id: 'kitty',    label: 'Trip Kitty',    icon: '🪣' },
+                { id: 'personal', label: 'Out of Pocket', icon: '💸' },
+              ].map(src => (
+                <motion.button
+                  key={src.id}
+                  onClick={() => set('paymentSource', src.id)}
+                  className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs font-medium"
+                  animate={{
+                    backgroundColor: form.paymentSource === src.id ? 'var(--color-primary-dim)' : 'var(--color-surface-2)',
+                    borderColor:     form.paymentSource === src.id ? 'var(--color-primary)'     : 'var(--color-border)',
+                    color:           form.paymentSource === src.id ? 'var(--color-primary)'     : 'var(--color-muted)',
+                  }}
+                  transition={{ duration: 0.15 }} whileTap={{ scale: 0.94 }}
+                >
+                  <span className="text-base">{src.icon}</span>
+                  <span>{src.label}</span>
+                </motion.button>
+              ))}
+            </div>
+            <p className="text-[var(--color-muted)] text-[10px] mt-1.5 px-1">
+              {form.paymentSource === 'kitty'
+                ? 'Paid from the group pool — contributions already cover this, no new debt'
+                : 'Paid from personal money — group owes this person back at settle-up'}
+            </p>
+          </div>
+
+          {members.length > 0 && form.paidBy === null && form.paymentSource === 'personal' && (
             <p className="text-[var(--color-warning)] text-[10px] -mt-2 px-1">
-              ⚡ Settle Up won't track who paid this — tap a name above to credit them
+              ⚡ Settle Up won't track who to reimburse — tap a name in "Paid by" above
             </p>
           )}
 

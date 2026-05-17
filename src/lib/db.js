@@ -15,6 +15,7 @@ export function expToLocal(e) {
     customSplits:  e.custom_splits ?? null,
     isPreTrip:     e.is_pre_trip,
     paymentMethod: e.payment_method ?? null,
+    paymentSource: e.payment_source ?? 'personal',
     status:        e.status ?? 'approved',
     createdAt:     e.created_at,
   }
@@ -155,6 +156,7 @@ export async function syncExpenseAction(action, tripId) {
       custom_splits:  payload.customSplits  ?? null,
       is_pre_trip:    payload.isPreTrip      ?? false,
       payment_method: payload.paymentMethod ?? null,
+      payment_source: payload.paymentSource ?? 'personal',
       status:         payload.status        ?? 'approved',
     })
     if (error) console.error('syncExpense INSERT:', error)
@@ -169,8 +171,9 @@ export async function syncExpenseAction(action, tripId) {
       split_between: rest.splitBetween ?? [],
       split_mode:    rest.splitMode    ?? 'equal',
       custom_splits: rest.customSplits ?? null,
-      is_pre_trip:   rest.isPreTrip    ?? false,
-      status:        rest.status,
+      is_pre_trip:    rest.isPreTrip    ?? false,
+      payment_source: rest.paymentSource ?? 'personal',
+      status:         rest.status,
     }).eq('id', id)
     if (error) console.error('syncExpense UPDATE:', error)
   } else if (type === 'DELETE_EXPENSE') {
