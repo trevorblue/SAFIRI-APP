@@ -311,16 +311,47 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
     paymentMethod: initial?.paymentMethod ?? 'mpesa',
     isPreTrip:     initial?.isPreTrip     ?? false,
     splitBetween:  initial?.splitBetween  ?? members.map(m => m.id),
+    splitMode:     initial?.splitMode     ?? 'equal',
+    customSplits:  initial?.customSplits  ?? {},
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  function toggleSplitMember(id) {
+    const selected = form.splitBetween.includes(id)
+    setForm(f => ({
+      ...f,
+      splitBetween: selected ? f.splitBetween.filter(sid => sid !== id) : [...f.splitBetween, id],
+      customSplits: selected
+        ? Object.fromEntries(Object.entries(f.customSplits).filter(([k]) => k !== id))
+        : f.splitMode === 'custom' ? { ...f.customSplits, [id]: 0 } : f.customSplits,
+    }))
+  }
+
+  function setSplitMode(mode) {
+    if (mode === 'custom') {
+      const amt = Number(form.amount) || 0
+      const n = form.splitBetween.length
+      const share = n > 0 ? Math.round((amt / n) * 100) / 100 : 0
+      const splits = {}
+      form.splitBetween.forEach(id => { splits[id] = share })
+      setForm(f => ({ ...f, splitMode: 'custom', customSplits: splits }))
+    } else {
+      setForm(f => ({ ...f, splitMode: 'equal', customSplits: {} }))
+    }
+  }
 
   function handleDate(d) {
     set('date', d)
     set('isPreTrip', d < tripStartDate)
   }
 
-  const canSave = Number(form.amount) > 0 && form.description.trim() && (members.length === 0 || form.splitBetween.length > 0)
+  const customTotal = form.splitMode === 'custom'
+    ? form.splitBetween.reduce((s, id) => s + Number(form.customSplits[id] ?? 0), 0)
+    : 0
+  const canSave = Number(form.amount) > 0 && form.description.trim()
+    && (members.length === 0 || form.splitBetween.length > 0)
+    && (form.splitMode !== 'custom' || Math.abs(customTotal - Number(form.amount)) < 0.5)
 
   return (
     <>
@@ -468,10 +499,7 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
                   return (
                     <motion.button
                       key={m.id}
-                      onClick={() => set('splitBetween', selected
-                        ? form.splitBetween.filter(id => id !== m.id)
-                        : [...form.splitBetween, m.id]
-                      )}
+                      onClick={() => toggleSplitMember(m.id)}
                       className="px-3 py-1.5 rounded-xl text-xs font-medium"
                       animate={{
                         backgroundColor: selected ? 'var(--color-primary)' : 'var(--color-surface-2)',
@@ -493,6 +521,73 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
                 <p className="text-[var(--color-danger)] text-[10px] mt-1.5 px-1">
                   Select at least one member
                 </p>
+              )}
+
+              {/* Equal / Custom toggle — only shown when 2+ members splitting */}
+              {form.splitBetween.length >= 2 && (
+                <div className="mt-3">
+                  <label className="text-[var(--color-muted-2)] text-xs font-medium uppercase tracking-wide mb-2 block">
+                    How to split
+                  </label>
+                  <div className="flex gap-2">
+                    {['equal', 'custom'].map(mode => (
+                      <motion.button
+                        key={mode}
+                        onClick={() => setSplitMode(mode)}
+                        className="px-4 py-1.5 rounded-xl text-xs font-semibold"
+                        animate={{
+                          backgroundColor: form.splitMode === mode ? 'var(--color-primary)' : 'var(--color-surface-2)',
+                          color:           form.splitMode === mode ? 'var(--color-bg)'      : 'var(--color-muted)',
+                        }}
+                        transition={{ duration: 0.15 }} whileTap={{ scale: 0.92 }}
+                      >
+                        {mode === 'equal' ? 'Equal' : 'Custom'}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom amount inputs */}
+              {form.splitMode === 'custom' && form.splitBetween.length >= 2 && (
+                <div className="mt-3 space-y-2">
+                  {form.splitBetween.map(id => {
+                    const m = members.find(mem => mem.id === id)
+                    return (
+                      <div key={id} className="flex items-center gap-3">
+                        <span className="text-[var(--color-text)] text-xs font-medium w-20 truncate shrink-0">{m?.name}</span>
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] text-xs pointer-events-none">KES</span>
+                          <input
+                            type="number"
+                            value={form.customSplits[id] ?? ''}
+                            onChange={e => setForm(f => ({ ...f, customSplits: { ...f.customSplits, [id]: e.target.value } }))}
+                            placeholder="0"
+                            className="w-full bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-xl py-2 pl-10 pr-3 text-right text-sm font-semibold text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+                            inputMode="numeric"
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {/* Running total */}
+                  <div className="flex items-center justify-between pt-1 px-1">
+                    <span className="text-[var(--color-muted)] text-[10px]">Total assigned</span>
+                    <span className={`text-xs font-semibold tabular-nums ${
+                      Math.abs(customTotal - Number(form.amount)) < 0.5
+                        ? 'text-[var(--color-success)]'
+                        : 'text-[var(--color-danger)]'
+                    }`}>
+                      {formatKES(customTotal)} / {formatKES(Number(form.amount) || 0)}
+                      {' '}{Math.abs(customTotal - Number(form.amount)) < 0.5 ? '✓' : '⚠️'}
+                    </span>
+                  </div>
+                  {Math.abs(customTotal - Number(form.amount)) >= 0.5 && (
+                    <p className="text-[var(--color-danger)] text-[10px] px-1">
+                      Amounts must add up to {formatKES(Number(form.amount) || 0)}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -517,7 +612,13 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
         {/* Save — always visible */}
         <div className="px-5 py-3 shrink-0 border-t border-[var(--color-border)] space-y-2">
           <motion.button
-            onClick={() => canSave && onSave({ ...form, amount: Number(form.amount) })}
+            onClick={() => canSave && onSave({
+              ...form,
+              amount: Number(form.amount),
+              customSplits: form.splitMode === 'custom'
+                ? Object.fromEntries(form.splitBetween.map(id => [id, Number(form.customSplits[id] ?? 0)]))
+                : null,
+            })}
             className="w-full py-4 rounded-2xl font-semibold text-base"
             style={{
               backgroundColor: canSave ? 'var(--color-primary)' : 'var(--color-surface-3)',

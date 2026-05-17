@@ -374,9 +374,15 @@ export function TripProvider({ children }) {
       byCategory[e.category] = (byCategory[e.category] || 0) + e.amount
       const splitIds = e.splitBetween?.length > 0 ? e.splitBetween : allConfirmedIds
       if (splitIds.length > 0) {
-        const share = e.amount / splitIds.length
-        for (const id of splitIds) {
-          memberSpending[id] = (memberSpending[id] || 0) + share
+        if (e.splitMode === 'custom' && e.customSplits) {
+          for (const id of splitIds) {
+            memberSpending[id] = (memberSpending[id] || 0) + Number(e.customSplits[id] ?? 0)
+          }
+        } else {
+          const share = e.amount / splitIds.length
+          for (const id of splitIds) {
+            memberSpending[id] = (memberSpending[id] || 0) + share
+          }
         }
       }
     }
