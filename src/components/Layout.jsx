@@ -6,6 +6,7 @@ import { formatKES } from '../lib/constants'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import MoreMenu from './MoreMenu'
 import TutorialOverlay from './TutorialOverlay'
+import InstallPrompt from './InstallPrompt'
 import { hasTutorialBeenSeen } from '../lib/tutorial'
 import { BudgetIcon, MembersIcon, SettleIcon, MoreIcon, AddIcon, HomeIcon } from './icons'
 
@@ -187,6 +188,8 @@ export default function Layout({ onExitTrip, onCompleteTrip }) {
       <AnimatePresence>
         {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
       </AnimatePresence>
+
+      <InstallPrompt />
     </div>
   )
 }

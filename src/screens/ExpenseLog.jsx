@@ -3,8 +3,37 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, subDays, isToday, isYesterday } from 'date-fns'
 import { useTrip } from '../context/TripContext'
 import { formatKES, EXPENSE_CATEGORIES, PAYMENT_METHODS } from '../lib/constants'
-import { CloseIcon } from '../components/icons'
+import { CloseIcon, DownloadIcon } from '../components/icons'
 import { parseExpenseWithClaude, hasClaudeKey } from '../lib/claude'
+
+function exportCSV(expenses, members, tripName) {
+  const memberMap = Object.fromEntries(members.map(m => [m.id, m.name]))
+  const catMap    = Object.fromEntries(EXPENSE_CATEGORIES.map(c => [c.id, c.label]))
+  const esc       = v => `"${String(v ?? '').replace(/"/g, '""')}"`
+
+  const header = ['Date', 'Description', 'Category', 'Amount (KES)', 'Paid By', 'Payment', 'Pre-trip', 'Split Between']
+  const rows = expenses.map(e => [
+    e.date ?? '',
+    esc(e.description ?? ''),
+    catMap[e.category] ?? e.category ?? '',
+    e.amount,
+    e.paidBy ? (memberMap[e.paidBy] ?? e.paidBy) : 'Group',
+    e.paymentMethod ?? '',
+    e.isPreTrip ? 'Yes' : 'No',
+    esc((e.splitBetween ?? []).map(id => memberMap[id] ?? id).join(', ')),
+  ])
+
+  const csv  = [header.join(','), ...rows.map(r => r.join(','))].join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `${tripName.replace(/[^a-z0-9]/gi, '-')}-expenses.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 // ─── Heuristic parser ────────────────────────────────────────────────────────
 
@@ -162,9 +191,21 @@ export default function ExpenseLog() {
         <p className="text-[var(--color-primary)] text-xs uppercase tracking-widest font-semibold mb-1">Spending</p>
         <div className="flex items-end justify-between">
           <h1 className="text-[var(--color-text)] text-3xl font-bold">Expenses</h1>
-          <div className="text-right">
-            <p className="text-[var(--color-text)] font-bold text-xl tabular-nums">{formatKES(tripTotal)}</p>
-            <p className="text-[var(--color-muted)] text-xs">trip total</p>
+          <div className="flex items-end gap-3">
+            {approved.length > 0 && (
+              <motion.button
+                onClick={() => exportCSV(approved, confirmedMembers, state.trip.name)}
+                className="pb-1 text-[var(--color-muted)]"
+                whileTap={{ scale: 0.85 }}
+                title="Export as CSV"
+              >
+                <DownloadIcon size={20} stroke="currentColor" />
+              </motion.button>
+            )}
+            <div className="text-right">
+              <p className="text-[var(--color-text)] font-bold text-xl tabular-nums">{formatKES(tripTotal)}</p>
+              <p className="text-[var(--color-muted)] text-xs">trip total</p>
+            </div>
           </div>
         </div>
         {preTotal > 0 && (

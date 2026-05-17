@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+
+// Apply saved theme before first render to avoid flash
+;(function applyInitialTheme() {
+  const theme = localStorage.getItem('safiri_theme') ?? 'dark'
+  document.documentElement.setAttribute('data-theme', theme)
+})()
 import { AnimatePresence } from 'framer-motion'
 import { TripProvider, useTrip } from './context/TripContext'
 import { AuthProvider, useAuth } from './context/AuthContext'

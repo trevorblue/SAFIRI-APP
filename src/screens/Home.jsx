@@ -24,8 +24,18 @@ function SettingsSheet({ onClose }) {
   const [defaultPayer, setDefaultPayer] = useState(
     () => localStorage.getItem('safiri_default_payer') ?? null
   )
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem('safiri_theme') ?? 'dark'
+  )
   const [copied,           setCopied]           = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    localStorage.setItem('safiri_theme', next)
+    document.documentElement.setAttribute('data-theme', next)
+  }
 
   const { confirmedMembers, totalBudget, totalSpent, spentPercent, memberSpending } = computed
   const pendingCount = getQueueLength()
@@ -115,6 +125,16 @@ function SettingsSheet({ onClose }) {
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[var(--color-text)] text-sm">Currency</span>
               <span className="text-[var(--color-muted)] text-sm">KES</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[var(--color-text)] text-sm">Theme</span>
+              <motion.button
+                onClick={toggleTheme}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-[var(--color-border-strong)] text-[var(--color-text)]"
+                whileTap={{ scale: 0.93 }}
+              >
+                {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+              </motion.button>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[var(--color-text)] text-sm">Version</span>
