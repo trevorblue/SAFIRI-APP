@@ -365,7 +365,7 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
     amount:        initial?.amount        ?? '',
     category:      initial?.category      ?? 'food',
     date:          initial?.date          ?? format(new Date(), 'yyyy-MM-dd'),
-    paidBy:        initial?.paidBy        ?? null,
+    paidBy:        initial?.paidBy        ?? localStorage.getItem('safiri_default_payer') ?? null,
     paymentMethod: initial?.paymentMethod ?? 'mpesa',
     isPreTrip:     initial?.isPreTrip     ?? false,
     splitBetween:  initial?.splitBetween  ?? members.map(m => m.id),

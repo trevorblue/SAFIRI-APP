@@ -15,11 +15,51 @@ function formatKESCompact(amount) {
 }
 
 function SettingsSheet({ onClose }) {
-  const { user, signOut } = useAuth()
+  const { user, signOut }   = useAuth()
+  const { state, computed } = useTrip()
+
   const [alertsMuted, setAlertsMuted] = useState(
     () => localStorage.getItem('safiri_alerts_muted') === 'true'
   )
+  const [defaultPayer, setDefaultPayer] = useState(
+    () => localStorage.getItem('safiri_default_payer') ?? null
+  )
+  const [copied,           setCopied]           = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+
+  const { confirmedMembers, totalBudget, totalSpent, spentPercent, memberSpending } = computed
   const pendingCount = getQueueLength()
+
+  function copyTripSummary() {
+    const { trip } = state
+    const lines = [`${trip.name} — ${trip.destination || ''}`]
+    if (trip.startDate && trip.endDate) {
+      lines.push(`${format(parseISO(trip.startDate), 'MMM d')} – ${format(parseISO(trip.endDate), 'MMM d, yyyy')}`)
+    }
+    lines.push(
+      '',
+      `Budget  ${formatKES(totalBudget)}`,
+      `Spent   ${formatKES(totalSpent)} (${Math.round(spentPercent * 100)}%)`,
+      `Left    ${formatKES(totalBudget - totalSpent)}`,
+    )
+    if (confirmedMembers.length > 0) {
+      lines.push('')
+      for (const m of confirmedMembers) {
+        lines.push(`${m.name}  ${formatKES(Math.round(memberSpending[m.id] ?? 0))}`)
+      }
+    }
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    })
+  }
+
+  function clearData() {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('safiri'))
+      .forEach(k => localStorage.removeItem(k))
+    window.location.reload()
+  }
 
   return (
     <>
@@ -53,8 +93,9 @@ function SettingsSheet({ onClose }) {
           </motion.button>
         </div>
 
-        <div className="py-3 overflow-y-auto max-h-[75vh]">
-          {/* Account */}
+        <div className="py-3 overflow-y-auto max-h-[80vh]">
+
+          {/* ── Account ── */}
           <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Account</p>
           <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl px-4 py-3 mb-3">
             <div className="flex items-center gap-3">
@@ -68,7 +109,7 @@ function SettingsSheet({ onClose }) {
             </div>
           </div>
 
-          {/* App */}
+          {/* ── App ── */}
           <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">App</p>
           <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl divide-y divide-[var(--color-border)] mb-3 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3">
@@ -76,20 +117,52 @@ function SettingsSheet({ onClose }) {
               <span className="text-[var(--color-muted)] text-sm">KES</span>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[var(--color-text)] text-sm">Appearance</span>
-              <span className="text-[var(--color-muted)] text-sm">Dark</span>
-            </div>
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[var(--color-text)] text-sm">Data storage</span>
-              <span className="text-[var(--color-muted)] text-sm">Local + cloud</span>
-            </div>
-            <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[var(--color-text)] text-sm">Version</span>
               <span className="text-[var(--color-muted)] text-sm">1.0.0</span>
             </div>
           </div>
 
-          {/* Notifications */}
+          {/* ── Expenses — default payer ── */}
+          {state.setupComplete && confirmedMembers.length > 0 && (
+            <>
+              <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Expenses</p>
+              <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl mb-3 overflow-hidden">
+                <div className="px-4 py-3">
+                  <p className="text-[var(--color-text)] text-sm mb-0.5">Default payer</p>
+                  <p className="text-[var(--color-muted)] text-[11px] mb-3">
+                    Pre-fills "Who paid?" every time you log a new expense
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => { setDefaultPayer(null); localStorage.removeItem('safiri_default_payer') }}
+                      className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
+                      style={{
+                        backgroundColor: defaultPayer === null ? 'var(--color-primary)' : 'var(--color-surface-3)',
+                        color: defaultPayer === null ? 'var(--color-bg)' : 'var(--color-muted)',
+                      }}
+                    >
+                      None
+                    </button>
+                    {confirmedMembers.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => { setDefaultPayer(m.id); localStorage.setItem('safiri_default_payer', m.id) }}
+                        className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
+                        style={{
+                          backgroundColor: defaultPayer === m.id ? 'var(--color-primary)' : 'var(--color-surface-3)',
+                          color: defaultPayer === m.id ? 'var(--color-bg)' : 'var(--color-muted)',
+                        }}
+                      >
+                        {m.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Notifications ── */}
           <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Notifications</p>
           <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl divide-y divide-[var(--color-border)] mb-3 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 gap-3">
@@ -114,7 +187,49 @@ function SettingsSheet({ onClose }) {
             </div>
           </div>
 
-          {/* Pending sync — only shown when queue is non-empty */}
+          {/* ── Trip — export summary ── */}
+          {state.setupComplete && (
+            <>
+              <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Trip</p>
+              <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl divide-y divide-[var(--color-border)] mb-3 overflow-hidden">
+                <motion.button
+                  onClick={copyTripSummary}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left"
+                  whileTap={{ backgroundColor: 'var(--color-surface-3)' }}
+                >
+                  <div>
+                    <p className="text-[var(--color-text)] text-sm">Copy trip summary</p>
+                    <p className="text-[var(--color-muted)] text-[11px]">Budget, spend &amp; per-member breakdown for the group chat</p>
+                  </div>
+                  <AnimatePresence mode="wait">
+                    {copied ? (
+                      <motion.span
+                        key="copied"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="text-[var(--color-success)] text-xs font-semibold shrink-0 ml-3"
+                      >
+                        Copied!
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="icon"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-[var(--color-muted)] text-sm shrink-0 ml-3"
+                      >
+                        📋
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              </div>
+            </>
+          )}
+
+          {/* ── Sync — only when queue is non-empty ── */}
           {pendingCount > 0 && (
             <>
               <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Sync</p>
@@ -132,21 +247,50 @@ function SettingsSheet({ onClose }) {
             </>
           )}
 
-          {/* Help */}
-          <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Help</p>
-          <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl divide-y divide-[var(--color-border)] mb-3 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[var(--color-text)] text-sm">Tip: tour</span>
-              <span className="text-[var(--color-muted)] text-xs">More → Show tour</span>
-            </div>
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[var(--color-text)] text-sm">Share trip link</span>
-              <span className="text-[var(--color-muted)] text-xs">More → Share group view</span>
-            </div>
+          {/* ── Data — clear local data ── */}
+          <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Data</p>
+          <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl mb-4 overflow-hidden">
+            {!showClearConfirm ? (
+              <motion.button
+                onClick={() => setShowClearConfirm(true)}
+                className="w-full flex items-center justify-between px-4 py-3 text-left"
+                whileTap={{ backgroundColor: 'var(--color-surface-3)' }}
+              >
+                <div>
+                  <p className="text-[var(--color-danger)] text-sm">Clear local data</p>
+                  <p className="text-[var(--color-muted)] text-[11px]">Resets the app on this device — cannot be undone</p>
+                </div>
+                <span className="text-[var(--color-danger)] text-sm ml-3">→</span>
+              </motion.button>
+            ) : (
+              <div className="px-4 py-3">
+                <p className="text-[var(--color-text)] text-sm font-semibold mb-1">Are you sure?</p>
+                <p className="text-[var(--color-muted)] text-[11px] mb-3">
+                  All trip data, expenses, and members will be permanently deleted from this device.
+                </p>
+                <div className="flex gap-2">
+                  <motion.button
+                    onClick={clearData}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white"
+                    style={{ backgroundColor: 'var(--color-danger)' }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Yes, clear everything
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setShowClearConfirm(false)}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-[var(--color-muted)] border border-[var(--color-border)]"
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Cancel
+                  </motion.button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Sign out */}
-          <div className="px-4 pt-1">
+          {/* ── Sign out ── */}
+          <div className="px-4 pt-1 pb-1">
             <motion.button
               onClick={async () => { onClose(); await signOut() }}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-[var(--color-danger)]/30 text-[var(--color-danger)] text-sm font-semibold"
@@ -156,6 +300,7 @@ function SettingsSheet({ onClose }) {
               Sign out
             </motion.button>
           </div>
+
         </div>
       </motion.div>
     </>
@@ -163,15 +308,15 @@ function SettingsSheet({ onClose }) {
 }
 
 function PastTripCard({ trip, onClone, onUseGroup }) {
-  const [action, setAction] = useState(null) // 'clone' | 'group' | null
+  const [action, setAction] = useState(null)
 
   const days = trip.startDate && trip.endDate
     ? differenceInCalendarDays(parseISO(trip.endDate), parseISO(trip.startDate)) + 1
     : null
-  const totalBudget = trip.budgetPerPerson * trip.groupSize
-  const totalSpent  = trip.archivedTotalSpent
-  const hasSpend    = totalSpent !== null
-  const spentPct    = hasSpend && totalBudget > 0 ? Math.min(totalSpent / totalBudget, 1) : 0
+  const totalBudget   = trip.budgetPerPerson * trip.groupSize
+  const totalSpent    = trip.archivedTotalSpent
+  const hasSpend      = totalSpent !== null
+  const spentPct      = hasSpend && totalBudget > 0 ? Math.min(totalSpent / totalBudget, 1) : 0
   const costPerPerson = hasSpend && trip.archivedMemberCount > 0
     ? Math.round(totalSpent / trip.archivedMemberCount)
     : null
@@ -194,7 +339,6 @@ function PastTripCard({ trip, onClone, onUseGroup }) {
       animate={{ opacity: 1, y: 0 }}
       className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 mb-3"
     >
-      {/* Header */}
       <div className="flex items-start justify-between mb-2.5">
         <div className="flex-1 min-w-0">
           <p className="text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-widest mb-0.5">
@@ -214,7 +358,6 @@ function PastTripCard({ trip, onClone, onUseGroup }) {
         </span>
       </div>
 
-      {/* Spend summary */}
       {totalBudget > 0 && (
         <div className="mb-3">
           <div className="flex justify-between text-[10px] text-[var(--color-muted)] mb-1.5">
@@ -237,26 +380,19 @@ function PastTripCard({ trip, onClone, onUseGroup }) {
             </div>
           )}
           <div className="flex gap-4 text-[10px] text-[var(--color-muted)]">
-            {costPerPerson !== null && (
-              <span>{formatKES(costPerPerson)}/person</span>
-            )}
+            {costPerPerson !== null && <span>{formatKES(costPerPerson)}/person</span>}
             <span>{trip.groupSize} {trip.groupSize === 1 ? 'person' : 'people'}</span>
             {days && <span>{days} days</span>}
           </div>
         </div>
       )}
 
-      {/* Actions */}
       <div className="flex gap-2 pt-1">
         <motion.button
           onClick={doClone}
           disabled={!!action}
           className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-center transition-opacity"
-          style={{
-            backgroundColor: 'var(--color-primary)',
-            color: 'var(--color-bg)',
-            opacity: action ? 0.55 : 1,
-          }}
+          style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-bg)', opacity: action ? 0.55 : 1 }}
           whileTap={!action ? { scale: 0.95 } : {}}
         >
           {action === 'clone' ? 'Loading…' : 'Clone trip'}
@@ -322,8 +458,10 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
     })
   }
 
-  // Countdown helpers
-  const d = computed.daysToTrip
+  const d               = computed.daysToTrip
+  const checklistDone   = (state.checklist ?? []).filter(i => i.done).length
+  const checklistTotal  = (state.checklist ?? []).length
+  const checklistPct    = checklistTotal > 0 ? checklistDone / checklistTotal : 0
 
   function CountdownBadge() {
     if (d > 0) return (
@@ -346,10 +484,6 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
     )
     return null
   }
-
-  const checklistDone  = (state.checklist ?? []).filter(i => i.done).length
-  const checklistTotal = (state.checklist ?? []).length
-  const checklistPct   = checklistTotal > 0 ? checklistDone / checklistTotal : 0
 
   return (
     <motion.div
@@ -378,16 +512,14 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
 
       {setupComplete ? (
         <>
-          <p className="text-[var(--color-muted)] text-xs uppercase tracking-widest font-medium mb-3">
-            Active
-          </p>
+          <p className="text-[var(--color-muted)] text-xs uppercase tracking-widest font-medium mb-3">Active</p>
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 mb-4"
           >
-            {/* Trip name / destination / dates */}
+            {/* Trip header */}
             <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="text-[var(--color-primary)] text-xs font-semibold uppercase tracking-widest mb-0.5">
@@ -405,7 +537,7 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
               </span>
             </div>
 
-            {/* Countdown badge */}
+            {/* Countdown */}
             <CountdownBadge />
 
             {/* Member avatars + group readiness */}
@@ -531,11 +663,7 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
               >
-                <PastTripCard
-                  trip={t}
-                  onClone={handleClone}
-                  onUseGroup={handleUseGroup}
-                />
+                <PastTripCard trip={t} onClone={handleClone} onUseGroup={handleUseGroup} />
               </motion.div>
             ))
           )}
