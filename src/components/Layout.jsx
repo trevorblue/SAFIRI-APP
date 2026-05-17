@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTrip } from '../context/TripContext'
 import { formatKES } from '../lib/constants'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import MoreMenu from './MoreMenu'
 import TutorialOverlay from './TutorialOverlay'
 import { hasTutorialBeenSeen } from '../lib/tutorial'
@@ -17,6 +18,7 @@ const TABS = [
 
 export default function Layout({ onExitTrip }) {
   const { computed } = useTrip()
+  const online = useOnlineStatus()
   const [showMore, setShowMore]         = useState(false)
   const [showTutorial, setShowTutorial] = useState(() => !hasTutorialBeenSeen())
   const navigate = useNavigate()
@@ -24,6 +26,22 @@ export default function Layout({ onExitTrip }) {
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
+      {/* Offline banner */}
+      <AnimatePresence>
+        {!online && (
+          <motion.div
+            key="offline"
+            initial={{ y: -32, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -32, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="px-4 py-2 text-center text-xs font-semibold tracking-wide bg-[var(--color-surface-2)] text-[var(--color-muted)]"
+          >
+            No internet · changes saved locally
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Alert banner */}
       <AnimatePresence>
         {computed.alertLevel && (

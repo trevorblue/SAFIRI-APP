@@ -19,6 +19,7 @@ import {
   expToLocal,
   memberToLocal,
 } from '../lib/db'
+import { enqueueAction, flushQueue } from '../lib/offlineQueue'
 
 const STORAGE_KEY = 'safiri_v1'
 
@@ -301,16 +302,28 @@ export function TripProvider({ children }) {
     return () => { supabase.removeChannel(channel) }
   }, [state.tripDbId])
 
+  // Flush offline queue whenever connection is restored
+  useEffect(() => {
+    if (!userId) return
+    function handleOnline() { flushQueue() }
+    window.addEventListener('online', handleOnline)
+    return () => window.removeEventListener('online', handleOnline)
+  }, [userId])
+
   // Wrapped dispatch: updates local state immediately, then syncs to Supabase in background
   const safeDispatch = useCallback((action) => {
     dispatch(action)
     if (!supabase || !userId) return
     const tripId = state.tripDbId
-    if (['ADD_EXPENSE', 'UPDATE_EXPENSE', 'DELETE_EXPENSE'].includes(action.type)) {
-      syncExpenseAction(action, tripId)
-    } else if (['ADD_MEMBER', 'UPDATE_MEMBER', 'REMOVE_MEMBER'].includes(action.type)) {
-      syncMemberAction(action, tripId)
+    const isExpense = ['ADD_EXPENSE', 'UPDATE_EXPENSE', 'DELETE_EXPENSE'].includes(action.type)
+    const isMember  = ['ADD_MEMBER',  'UPDATE_MEMBER',  'REMOVE_MEMBER' ].includes(action.type)
+
+    if (isExpense || isMember) {
+      if (!navigator.onLine) { enqueueAction(action, tripId); return }
+      if (isExpense) syncExpenseAction(action, tripId)
+      else           syncMemberAction(action, tripId)
     } else if (action.type === 'ADD_CONTRIBUTION' || action.type === 'REMOVE_CONTRIBUTION') {
+      if (!navigator.onLine) return
       const s = latestStateRef.current
       const current = s.contributions ?? []
       const newContributions = action.type === 'ADD_CONTRIBUTION'
