@@ -344,8 +344,9 @@ export function TripProvider({ children }) {
       : trip.budgetPerPerson / tripDays
     const dailyBudget = totalBudget / tripDays
 
-    const tripExpenses = expenses.filter(e => !e.isPreTrip)
-    const preTrip = expenses.filter(e => e.isPreTrip)
+    const pendingExpenses = expenses.filter(e => e.status === 'pending')
+    const tripExpenses = expenses.filter(e => !e.isPreTrip && e.status !== 'pending')
+    const preTrip = expenses.filter(e => e.isPreTrip && e.status !== 'pending')
     const totalSpent = tripExpenses.reduce((sum, e) => sum + e.amount, 0)
     const totalRemaining = totalBudget - totalSpent
     const spentPercent = totalBudget > 0 ? totalSpent / totalBudget : 0
@@ -441,6 +442,8 @@ export function TripProvider({ children }) {
       tripAsMonthPercent,
       preTripExpenses: preTrip,
       preTripTotal: preTrip.reduce((s, e) => s + e.amount, 0),
+      pendingExpenses,
+      pendingCount: pendingExpenses.length,
     }
   }, [state])
 

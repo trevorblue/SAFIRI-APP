@@ -107,15 +107,17 @@ const fadeUp  = { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, tr
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function ExpenseLog() {
-  const { state, dispatch } = useTrip()
+  const { state, dispatch, computed } = useTrip()
   const [quick, setQuick] = useState('')
   const [sheet, setSheet] = useState(null)
   const [parsing, setParsing] = useState(false)
 
   const confirmedMembers = state.members.filter(m => m.status === 'confirmed')
-  const groups     = useMemo(() => groupExpenses(state.expenses), [state.expenses])
-  const tripTotal  = state.expenses.filter(e => !e.isPreTrip).reduce((s, e) => s + e.amount, 0)
-  const preTotal   = state.expenses.filter(e =>  e.isPreTrip).reduce((s, e) => s + e.amount, 0)
+  const approved   = useMemo(() => state.expenses.filter(e => e.status !== 'pending'), [state.expenses])
+  const groups     = useMemo(() => groupExpenses(approved), [approved])
+  const tripTotal  = approved.filter(e => !e.isPreTrip).reduce((s, e) => s + e.amount, 0)
+  const preTotal   = approved.filter(e =>  e.isPreTrip).reduce((s, e) => s + e.amount, 0)
+  const { pendingExpenses, pendingCount } = computed
 
   const openParse = useCallback(async () => {
     if (!quick.trim()) return
@@ -200,6 +202,58 @@ export default function ExpenseLog() {
             : 'Type spend + amount (+ who paid, day) and hit Parse — or tap + Add'}
         </p>
       </motion.div>
+
+      {/* Pending section */}
+      {pendingCount > 0 && (
+        <motion.div variants={fadeUp} className="px-4 mb-5">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <span className="text-[var(--color-warning)] text-sm font-semibold">Pending</span>
+            <span className="text-[10px] font-bold text-[var(--color-warning)] bg-[var(--color-warning-dim)] px-1.5 py-0.5 rounded-full">
+              {pendingCount}
+            </span>
+            <span className="text-[var(--color-muted)] text-[10px]">— awaiting approval</span>
+          </div>
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-warning-dim)] divide-y divide-[var(--color-border)] overflow-hidden">
+            {pendingExpenses.map(expense => {
+              const cat    = EXPENSE_CATEGORIES.find(c => c.id === expense.category)
+              const member = confirmedMembers.find(m => m.id === expense.paidBy)
+              return (
+                <div key={expense.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-xl w-7 text-center shrink-0">{cat?.icon ?? '📌'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[var(--color-text)] text-sm font-medium truncate">{expense.description}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {member && (
+                        <span className="text-[10px] text-[var(--color-primary)] bg-[var(--color-primary-dim)] px-1.5 py-0.5 rounded-full">
+                          {member.name}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-[var(--color-warning)] bg-[var(--color-warning-dim)] px-1.5 py-0.5 rounded-full">
+                        pending
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[var(--color-text)] font-semibold text-sm tabular-nums">{formatKES(expense.amount)}</span>
+                    <motion.button
+                      onClick={() => dispatch({ type: 'UPDATE_EXPENSE', payload: { id: expense.id, status: 'approved' } })}
+                      className="w-8 h-8 rounded-full bg-[var(--color-success-dim)] flex items-center justify-center text-[var(--color-success)] text-base font-bold"
+                      whileTap={{ scale: 0.85 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                      title="Approve"
+                    >✓</motion.button>
+                    <motion.button
+                      onClick={() => dispatch({ type: 'DELETE_EXPENSE', payload: expense.id })}
+                      className="w-8 h-8 rounded-full bg-[var(--color-danger-dim)] flex items-center justify-center text-[var(--color-danger)] text-base font-bold"
+                      whileTap={{ scale: 0.85 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                      title="Reject"
+                    >✕</motion.button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Empty state */}
       {groups.length === 0 && (
@@ -313,6 +367,7 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
     splitBetween:  initial?.splitBetween  ?? members.map(m => m.id),
     splitMode:     initial?.splitMode     ?? 'equal',
     customSplits:  initial?.customSplits  ?? {},
+    status:        initial?.status        ?? 'approved',
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -604,6 +659,22 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
               transition={{ duration: 0.15 }}>
               <motion.span className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
                 animate={{ left: form.isPreTrip ? '22px' : '2px' }}
+                transition={{ type: 'spring', stiffness: 500, damping: 28 }} />
+            </motion.button>
+          </div>
+
+          {/* Needs review toggle */}
+          <div className="flex items-center justify-between py-1">
+            <div>
+              <p className="text-[var(--color-muted-2)] text-xs font-medium uppercase tracking-wide">Needs review</p>
+              <p className="text-[var(--color-muted)] text-[10px] mt-0.5">Hold for approval — won't affect budget yet</p>
+            </div>
+            <motion.button onClick={() => set('status', form.status === 'pending' ? 'approved' : 'pending')}
+              className="w-10 h-5 rounded-full relative shrink-0"
+              animate={{ backgroundColor: form.status === 'pending' ? 'var(--color-warning)' : 'var(--color-surface-3)' }}
+              transition={{ duration: 0.15 }}>
+              <motion.span className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
+                animate={{ left: form.status === 'pending' ? '22px' : '2px' }}
                 transition={{ type: 'spring', stiffness: 500, damping: 28 }} />
             </motion.button>
           </div>

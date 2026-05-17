@@ -80,15 +80,18 @@ export default function Layout({ onExitTrip }) {
               return (
                 <motion.button
                   key="fab"
-                  onClick={() => {
-                    navigate('/expenses')
-                  }}
+                  onClick={() => { navigate('/expenses') }}
                   className="flex flex-col items-center gap-1 -mt-5"
                   whileTap={{ scale: 0.88 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
                 >
-                  <span data-tour="fab" className="w-14 h-14 rounded-full bg-[var(--color-primary)] flex items-center justify-center shadow-lg shadow-[color:var(--color-primary)]/30">
+                  <span data-tour="fab" className="relative w-14 h-14 rounded-full bg-[var(--color-primary)] flex items-center justify-center shadow-lg shadow-[color:var(--color-primary)]/30">
                     <AddIcon size={26} stroke="var(--color-bg)" />
+                    {computed.pendingCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-[var(--color-danger)] flex items-center justify-center px-1">
+                        <span className="text-white text-[10px] font-bold leading-none">{computed.pendingCount}</span>
+                      </span>
+                    )}
                   </span>
                   <span className="text-[10px] text-[var(--color-muted)]">Add</span>
                 </motion.button>
