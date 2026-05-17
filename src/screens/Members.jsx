@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { useSearchParams } from 'react-router-dom'
 import { useTrip } from '../context/TripContext'
+import { useAuth } from '../context/AuthContext'
 import { formatKES } from '../lib/constants'
 import { CloseIcon, WalletIcon } from '../components/icons'
+import { createTrip, loadUserTrip } from '../lib/db'
 
 function fmtRange(start, end) {
   try {
@@ -33,6 +35,7 @@ const fadeUp = {
 
 export default function Members() {
   const { state, dispatch, computed } = useTrip()
+  const { user } = useAuth()
   const [searchParams] = useSearchParams()
   const [showAdd,      setShowAdd]      = useState(searchParams.get('add') === 'true')
   const [showInvite,   setShowInvite]   = useState(false)
@@ -339,6 +342,9 @@ export default function Members() {
           <InviteSheet
             trip={trip}
             tripDbId={state.tripDbId}
+            userId={user?.id}
+            state={state}
+            dispatch={dispatch}
             onClose={() => setShowInvite(false)}
           />
         )}
@@ -355,8 +361,26 @@ export default function Members() {
 
 // ─── Invite Sheet ─────────────────────────────────────────────────────────────
 
-function InviteSheet({ trip, tripDbId, onClose }) {
-  const [copied, setCopied] = useState(false)
+function InviteSheet({ trip, tripDbId, userId, state, dispatch, onClose }) {
+  const [copied,  setCopied]  = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncErr, setSyncErr] = useState(null)
+
+  async function handleSync() {
+    if (!userId || syncing) return
+    setSyncing(true)
+    setSyncErr(null)
+    const tripId = await createTrip(userId, state)
+    if (!tripId) {
+      setSyncing(false)
+      setSyncErr('Could not sync — check your connection and try again.')
+      return
+    }
+    const dbState = await loadUserTrip(userId)
+    if (dbState) dispatch({ type: 'LOAD_FROM_DB', payload: dbState })
+    else dispatch({ type: 'SET_TRIP_DB_ID', payload: tripId })
+    setSyncing(false)
+  }
 
   if (!tripDbId) {
     return (
@@ -375,13 +399,20 @@ function InviteSheet({ trip, tripDbId, onClose }) {
           <div className="px-5 py-8 text-center">
             <p className="text-3xl mb-3">🔗</p>
             <p className="text-[var(--color-text)] font-semibold mb-2">Trip not yet synced</p>
-            <p className="text-[var(--color-muted)] text-sm mb-6">
-              This trip was created offline. Exit the trip, sign out and back in — the app will sync it to the cloud and the invite link will be ready.
+            <p className="text-[var(--color-muted)] text-sm mb-5">
+              This trip only exists on this device. Sync it to the cloud to get an invite link.
             </p>
-            <motion.button onClick={onClose}
-              className="w-full py-3.5 rounded-2xl bg-[var(--color-primary)] text-[var(--color-bg)] font-semibold"
+            {syncErr && <p className="text-[var(--color-danger)] text-xs mb-3">{syncErr}</p>}
+            <motion.button onClick={handleSync}
+              disabled={syncing}
+              className="w-full py-3.5 rounded-2xl bg-[var(--color-primary)] text-[var(--color-bg)] font-semibold mb-3"
               whileTap={{ scale: 0.96 }}>
-              Got it
+              {syncing ? 'Syncing…' : 'Sync now'}
+            </motion.button>
+            <motion.button onClick={onClose}
+              className="w-full py-2.5 rounded-2xl text-[var(--color-muted)] text-sm"
+              whileTap={{ scale: 0.96 }}>
+              Cancel
             </motion.button>
           </div>
         </motion.div>

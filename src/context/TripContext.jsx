@@ -234,6 +234,11 @@ export function TripProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [state])
 
+  // Reset sync guard on sign-out so it re-runs when the user signs back in
+  useEffect(() => {
+    if (!userId) syncingRef.current = false
+  }, [userId])
+
   // Load trip from Supabase when the user signs in
   useEffect(() => {
     if (!supabase || !userId) return
