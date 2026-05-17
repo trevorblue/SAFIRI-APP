@@ -20,27 +20,31 @@ const slideVariants = {
 
 const transition = { type: 'spring', stiffness: 340, damping: 34 }
 
-export default function Onboarding({ onComplete, onCancel }) {
+export default function Onboarding({ onComplete, onCancel, prefill }) {
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
 
-  const [form, setForm] = useState({
-    name: DEFAULT_TRIP.name,
-    destination: DEFAULT_TRIP.destination,
-    startDate: DEFAULT_TRIP.startDate,
-    endDate: DEFAULT_TRIP.endDate,
-    preTripDate: DEFAULT_TRIP.preTripDate,
-    budgetPerPerson: DEFAULT_TRIP.budgetPerPerson,
-    monthlyBudget: '',
-    transportMode: DEFAULT_TRIP.transportMode,
-    sgrCostPerPerson: DEFAULT_TRIP.sgrCostPerPerson ?? 1000,
-    carTotalCost: DEFAULT_TRIP.carTotalCost ?? 0,
-    carType: 'sedan',
-    carDailyRate: '',
-    rentalDays: '',
-    groupSize: 4,
-    memberNames: ['', '', '', ''],
-    budgetMode: 'perPerson',
+  const [form, setForm] = useState(() => {
+    const pSize  = prefill?.groupSize ?? 4
+    const pNames = prefill?.memberNames ?? []
+    return {
+      name:             prefill?.name             ?? DEFAULT_TRIP.name,
+      destination:      prefill?.destination      ?? DEFAULT_TRIP.destination,
+      startDate:        prefill?.startDate        ?? DEFAULT_TRIP.startDate,
+      endDate:          prefill?.endDate          ?? DEFAULT_TRIP.endDate,
+      preTripDate:      DEFAULT_TRIP.preTripDate,
+      budgetPerPerson:  prefill?.budgetPerPerson  ?? DEFAULT_TRIP.budgetPerPerson,
+      monthlyBudget:    '',
+      transportMode:    prefill?.transportMode    ?? DEFAULT_TRIP.transportMode,
+      sgrCostPerPerson: prefill?.sgrCostPerPerson ?? DEFAULT_TRIP.sgrCostPerPerson ?? 1000,
+      carTotalCost:     prefill?.carTotalCost     ?? DEFAULT_TRIP.carTotalCost ?? 0,
+      carType:          prefill?.carType          ?? 'sedan',
+      carDailyRate:     '',
+      rentalDays:       '',
+      groupSize:        pSize,
+      memberNames:      Array.from({ length: pSize }, (_, i) => pNames[i] ?? ''),
+      budgetMode:       'perPerson',
+    }
   })
 
   function set(key, val) {
@@ -147,7 +151,7 @@ export default function Onboarding({ onComplete, onCancel }) {
             className="absolute inset-0 px-5 pt-6 pb-4 overflow-y-auto"
           >
             {step === 0 && (
-              <Step1 form={form} set={set} />
+              <Step1 form={form} set={set} prefill={prefill} />
             )}
             {step === 1 && (
               <Step2 form={form} set={set} tripDays={tripDays} dailyBudget={dailyBudget} />
@@ -184,7 +188,7 @@ export default function Onboarding({ onComplete, onCancel }) {
 }
 
 /* ─── Step 1: Trip name + destination ─── */
-function Step1({ form, set }) {
+function Step1({ form, set, prefill }) {
   return (
     <div>
       <motion.div
@@ -198,9 +202,16 @@ function Step1({ form, set }) {
         <h2 className="text-[var(--color-text)] text-3xl font-bold leading-tight mb-1">
           Name your trip
         </h2>
-        <p className="text-[var(--color-muted)] text-sm mb-8">
+        <p className="text-[var(--color-muted)] text-sm mb-4">
           What are you calling this one?
         </p>
+        {prefill?._sourceName && (
+          <div className="bg-[var(--color-primary-dim)] border border-[color:var(--color-primary)]/20 rounded-xl px-3 py-2 mb-5 text-xs text-[var(--color-primary)]">
+            {prefill._cloneType === 'full'
+              ? `Cloned from "${prefill._sourceName}" — edit anything you like`
+              : `Group imported from "${prefill._sourceName}" — fill in your new trip details`}
+          </div>
+        )}
       </motion.div>
 
       <motion.div

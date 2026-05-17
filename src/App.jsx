@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion'
 import { TripProvider, useTrip } from './context/TripContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { seedDemoData } from './lib/demoSeed'
+import { archiveTrip } from './lib/db'
 import Splash from './screens/Splash'
 import Login from './screens/Login'
 import Home from './screens/Home'
@@ -52,8 +53,9 @@ function AppShell() {
   const [splashDone, setSplashDone] = useState(false)
   // 'home' | 'onboarding' | 'trip'
   const [view, setView] = useState('home')
+  const [prefillData, setPrefillData] = useState(null)
   const { session } = useAuth()
-  const { state, dispatch } = useTrip()
+  const { state, dispatch, computed } = useTrip()
 
   // Reset to home on sign-out so the next sign-in starts fresh
   useEffect(() => {
@@ -62,9 +64,26 @@ function AppShell() {
   }, [session])
 
   function handleTripComplete(payload) {
-    // Clear old trip data only when the user actually finishes setting up the new one
+    // Archive the current trip before replacing it — fire and forget
+    if (state.tripDbId) {
+      archiveTrip(state.tripDbId, {
+        archivedTotalSpent:  computed.totalSpent,
+        archivedMemberCount: computed.confirmedMembers.length,
+      })
+    }
     dispatch({ type: 'RESET' })
     dispatch({ type: 'COMPLETE_SETUP', payload })
+    setPrefillData(null)
+    setView('home')
+  }
+
+  function handleCloneTrip(tripData) {
+    setPrefillData(tripData)
+    setView('onboarding')
+  }
+
+  function handleCancel() {
+    setPrefillData(null)
     setView('home')
   }
 
@@ -78,8 +97,9 @@ function AppShell() {
       ) : view === 'onboarding' ? (
         <Onboarding
           key="onboarding"
+          prefill={prefillData}
           onComplete={handleTripComplete}
-          onCancel={() => setView('home')}
+          onCancel={handleCancel}
         />
       ) : view === 'trip' && state.setupComplete ? (
         <AppRoutes key="app" onExitTrip={() => setView('home')} />
@@ -88,6 +108,7 @@ function AppShell() {
           key="home"
           onEnterTrip={() => setView('trip')}
           onCreateTrip={() => setView('onboarding')}
+          onCloneTrip={handleCloneTrip}
         />
       )}
     </AnimatePresence>

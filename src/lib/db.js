@@ -173,6 +173,62 @@ export async function syncExpenseAction(action, tripId) {
   }
 }
 
+// Archive a trip — mark complete and snapshot spend totals into settings
+export async function archiveTrip(tripId, snapshot = {}) {
+  if (!supabase || !tripId) return
+  const { data: trip } = await supabase
+    .from('trips')
+    .select('settings')
+    .eq('id', tripId)
+    .single()
+  const merged = { ...(trip?.settings ?? {}), ...snapshot, archivedAt: new Date().toISOString() }
+  const { error } = await supabase
+    .from('trips')
+    .update({ status: 'complete', settings: merged })
+    .eq('id', tripId)
+  if (error) console.error('archiveTrip:', error)
+}
+
+// Fetch all trips (active + complete) for a user — lightweight, no expenses
+export async function fetchAllUserTrips(userId) {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('trips')
+    .select('id, name, start_date, end_date, budget_per_person, status, settings, created_at')
+    .eq('owner_id', userId)
+    .order('created_at', { ascending: false })
+  if (error) { console.error('fetchAllUserTrips:', error); return [] }
+  return (data ?? []).map(t => ({
+    id:                 t.id,
+    name:               t.name,
+    destination:        t.settings?.destination ?? '',
+    startDate:          t.start_date,
+    endDate:            t.end_date,
+    budgetPerPerson:    Number(t.budget_per_person),
+    groupSize:          Number(t.settings?.groupSize ?? 1),
+    status:             t.status ?? 'active',
+    transportMode:      t.settings?.transportMode ?? 'car',
+    sgrCostPerPerson:   Number(t.settings?.sgrCostPerPerson ?? 0),
+    carTotalCost:       Number(t.settings?.carTotalCost ?? 0),
+    carType:            t.settings?.carType ?? 'sedan',
+    archivedTotalSpent: t.settings?.archivedTotalSpent ?? null,
+    archivedMemberCount: Number(t.settings?.archivedMemberCount ?? 0) || null,
+    createdAt:          t.created_at,
+  }))
+}
+
+// Fetch confirmed member names for a trip (used for clone / recurring group)
+export async function fetchTripMemberNames(tripId) {
+  if (!supabase) return []
+  const { data } = await supabase
+    .from('trip_members')
+    .select('name')
+    .eq('trip_id', tripId)
+    .eq('confirmed', true)
+    .order('created_at')
+  return (data ?? []).map(m => m.name)
+}
+
 export async function syncMemberAction(action, tripId) {
   if (!supabase || !tripId) return
   const { type, payload } = action
