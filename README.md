@@ -192,28 +192,26 @@ GitHub Actions runs on every pull request:
 
 ## Roadmap
 
-### V1 — July 2026 Trip
-- [x] All 13 features built (localStorage)
-- [x] Itemized settle-up with per-expense breakdown
-- [x] Split-between for partial group expenses
-- [x] AI expense parsing (wired, needs API key)
-- [ ] Supabase sync + auth (any user can register and become a treasurer)
-- [ ] Multiple trips per account — past, active, and future all stored
-- [ ] Trip history: completed and cancelled trips archived forever, never deleted
-- [ ] Read-only share link for group members
-- [ ] Role-based access (treasurer vs. member)
-- [ ] PWA manifest + installable
-- [ ] Vercel deploy
+The full roadmap lives in **[ROADMAP.md](./ROADMAP.md)** — 12 phases from core features to startup-tier platform, each item marked Shipped / In Progress / Planned.
 
-### V2 — Post-Trip Refinement
-- Export to PDF / M-Pesa receipt format
-- Push notifications for expense alerts
-- Trip templates (reuse a setup for recurring group travel)
+### Current status at a glance
 
-### V3 — East Africa Expansion
-- Multi-currency (UGX, TZS, ETB)
-- Country-specific activity libraries
-- Public trip templates
+| Phase | Focus | Status |
+|---|---|---|
+| 1 — Core Trip Management | Setup, budget, afford calculator | ✅ Shipped |
+| 2 — Expense Tracking | Logging, splits, M-Pesa tags | ✅ Shipped |
+| 3 — Group Coordination | Members, settle-up, share view | ✅ Shipped |
+| 4 — Itinerary & Experience | Day planner, activity library, tutorial | ✅ Shipped |
+| 5 — Auth, Sync & Multi-User | Supabase, realtime, trip history, clone | ✅ Shipped (5C–5F in progress) |
+| 6 — Trip Lifecycle | Completion, extension, member departure, trip split | ⬜ Planned |
+| 7 — Multi-Trip Concurrency | Multiple active trips, trip switching | ⬜ Planned |
+| 8 — Governance & Succession | Treasurer handoff, role transfer | ⬜ Planned |
+| 9 — Social & Coordination | Member status, activity feed, polls | ⬜ Planned |
+| 10 — Smart Money | Receipt scan, M-Pesa import, multi-currency, savings goals | ⬜ Planned |
+| 11 — Trip Experience | Photo memories, smart packing, cross-trip analytics | ⬜ Planned |
+| 12 — B2B & Platform | Operator portal, marketplace, white label, expansion | 🚀 Startup-tier |
+
+→ [See full roadmap with all features](./ROADMAP.md)
 
 ---
 
