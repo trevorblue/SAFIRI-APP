@@ -97,7 +97,7 @@ function AppShell() {
       {/* Keep splash visible until animation ends AND auth has resolved */}
       {(!splashDone || session === undefined) ? (
         <Splash key="splash" onDone={() => setSplashDone(true)} />
-      ) : joinId ? (
+      ) : joinId && !session ? (
         <JoinTrip key="join" tripId={joinId} onDone={() => setJoinId(null)} />
       ) : session === null ? (
         <Login key="login" />

@@ -20,6 +20,7 @@ export default function JoinTrip({ tripId, onDone }) {
   const [joining, setJoining] = useState(false)
   const [result, setResult]   = useState(null) // { tripName, destination } on success
   const [err, setErr]         = useState(null)
+  const [declined, setDeclined] = useState(false)
 
   useEffect(() => {
     fetchTripForJoin(tripId).then(data => {
@@ -125,8 +126,27 @@ export default function JoinTrip({ tripId, onDone }) {
             </motion.div>
           )}
 
+          {/* Maybe later */}
+          {declined && (
+            <motion.div key="declined"
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20"
+            >
+              <p className="text-5xl mb-4">👋</p>
+              <p className="text-[var(--color-text)] font-bold text-xl mb-2">No problem!</p>
+              <p className="text-[var(--color-muted)] text-sm mb-8 max-w-[260px] mx-auto">
+                This link still works anytime. Just open it again when you're ready to join.
+              </p>
+              <motion.button onClick={onDone}
+                className="w-full py-3 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-muted)] text-sm font-medium"
+                whileTap={{ scale: 0.96 }}>
+                Close
+              </motion.button>
+            </motion.div>
+          )}
+
           {/* Join form */}
-          {!loading && trip && !result && (
+          {!loading && trip && !result && !declined && (
             <motion.div key="form"
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 380, damping: 28 }}
@@ -194,7 +214,7 @@ export default function JoinTrip({ tripId, onDone }) {
                 {joining ? 'Joining…' : 'Join trip'}
               </motion.button>
 
-              <motion.button onClick={onDone}
+              <motion.button onClick={() => setDeclined(true)}
                 className="w-full py-3 rounded-2xl text-[var(--color-muted)] text-sm font-medium"
                 whileTap={{ scale: 0.96 }}>
                 Maybe later
