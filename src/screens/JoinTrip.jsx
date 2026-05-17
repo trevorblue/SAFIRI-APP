@@ -18,9 +18,10 @@ export default function JoinTrip({ tripId, onDone }) {
   const [loading, setLoading] = useState(true)
   const [name, setName]       = useState('')
   const [joining, setJoining] = useState(false)
-  const [result, setResult]   = useState(null) // { tripName, destination } on success
-  const [err, setErr]         = useState(null)
+  const [result, setResult]     = useState(null) // { tripName, destination } on success
+  const [err, setErr]           = useState(null)
   const [declined, setDeclined] = useState(false)
+  const [showSummary, setShowSummary] = useState(false)
 
   useEffect(() => {
     fetchTripForJoin(tripId).then(data => {
@@ -118,11 +119,59 @@ export default function JoinTrip({ tripId, onDone }) {
                 Tell the group on WhatsApp
               </a>
 
-              <motion.button onClick={onDone}
+              <motion.button onClick={() => setShowSummary(true)}
                 className="w-full py-3 rounded-2xl text-[var(--color-muted)] text-sm font-medium"
                 whileTap={{ scale: 0.96 }}>
-                Done
+                View trip details
               </motion.button>
+            </motion.div>
+          )}
+
+          {/* Trip summary — shown after joining */}
+          {showSummary && trip && (
+            <motion.div key="summary"
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+            >
+              <p className="text-[var(--color-primary)] text-xs uppercase tracking-widest font-semibold mb-4 text-center">
+                You're confirmed ✓
+              </p>
+              <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl p-5 mb-4">
+                <h2 className="text-[var(--color-text)] text-2xl font-bold mb-0.5">{trip.name}</h2>
+                {trip.destination && (
+                  <p className="text-[var(--color-muted)] text-sm mb-3">{trip.destination}</p>
+                )}
+                <div className="flex gap-3">
+                  {trip.startDate && (
+                    <div className="bg-[var(--color-surface-2)] rounded-xl px-3 py-2 text-center flex-1">
+                      <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide mb-0.5">Dates</p>
+                      <p className="text-[var(--color-text)] text-xs font-semibold">
+                        {fmtRange(trip.startDate, trip.endDate)}
+                      </p>
+                    </div>
+                  )}
+                  {trip.budgetPerPerson > 0 && (
+                    <div className="bg-[var(--color-surface-2)] rounded-xl px-3 py-2 text-center flex-1">
+                      <p className="text-[var(--color-muted)] text-[10px] uppercase tracking-wide mb-0.5">Your budget</p>
+                      <p className="text-[var(--color-text)] text-xs font-semibold">
+                        KES {Number(trip.budgetPerPerson).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="text-[var(--color-muted)] text-xs text-center mb-6 px-4">
+                Save the invite link — open it anytime to see trip updates.
+              </p>
+              <a
+                href={`https://wa.me/?text=${waMessage()}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-[#25D366] text-white font-semibold text-base mb-3"
+              >
+                <span className="text-xl">📲</span>
+                Tell the group on WhatsApp
+              </a>
             </motion.div>
           )}
 
