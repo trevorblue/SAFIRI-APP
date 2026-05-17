@@ -73,6 +73,7 @@ function reducer(state, action) {
           id:       crypto.randomUUID(),
           name:     name.trim(),
           status:   'confirmed',
+          role:     'member',
           budget:   null,
           joinedAt: new Date().toISOString(),
         }))

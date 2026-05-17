@@ -177,9 +177,16 @@ export default function Members() {
                     </div>
                     <div>
                       <p className="text-[var(--color-text)] font-semibold leading-none mb-1">{member.name}</p>
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${meta.bg} ${meta.text}`}>
-                        {meta.label}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${meta.bg} ${meta.text}`}>
+                          {meta.label}
+                        </span>
+                        {member.role === 'treasurer' && (
+                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--color-primary-dim)] text-[var(--color-primary)]">
+                            Treasurer
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -188,6 +195,19 @@ export default function Members() {
                         Custom
                       </span>
                     )}
+                    <motion.button
+                      onClick={() => dispatch({
+                        type: 'UPDATE_MEMBER',
+                        payload: { id: member.id, role: member.role === 'treasurer' ? 'member' : 'treasurer' },
+                      })}
+                      className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                      style={member.role === 'treasurer'
+                        ? { backgroundColor: 'var(--color-primary-dim)', color: 'var(--color-primary)' }
+                        : { backgroundColor: 'var(--color-surface-3)',   color: 'var(--color-muted)'   }}
+                      whileTap={{ scale: 0.85 }}
+                    >
+                      {member.role === 'treasurer' ? '★ Treasurer' : '+ Treasurer'}
+                    </motion.button>
                     <motion.button
                       onClick={() => dispatch({ type: 'REMOVE_MEMBER', payload: member.id })}
                       className="text-[var(--color-muted)] p-1 rounded-full"
@@ -519,6 +539,7 @@ function AddMemberSheet({ tripBudget, onClose }) {
         id:       crypto.randomUUID(),
         name:     name.trim(),
         status,
+        role:     'member',
         budget:   custom && budget ? Number(budget) : null,
         joinedAt: new Date().toISOString(),
       },

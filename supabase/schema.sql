@@ -30,7 +30,7 @@ create table public.trip_members (
   user_id     uuid references auth.users(id) on delete set null,
   name        text not null,
   confirmed   boolean not null default false,
-  role        text not null default 'member'
+  role        text not null default 'member'AND 
                 check (role in ('owner', 'member')),
   created_at  timestamptz not null default now()
 );

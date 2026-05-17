@@ -1,23 +1,34 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
   const { signIn } = useAuth()
-  const [email, setEmail]     = useState('')
-  const [sent, setSent]       = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState(null)
+  const [email, setEmail]       = useState('')
+  const [sent, setSent]         = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState(null)
+  const [cooldown, setCooldown] = useState(0)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [cooldown])
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!email.trim()) return
+    if (!email.trim() || cooldown > 0) return
     setLoading(true)
     setError(null)
     const { error } = await signIn(email.trim())
     setLoading(false)
-    if (error) setError(error.message)
-    else setSent(true)
+    if (error) {
+      setError('Could not send the link — please wait and try again.')
+      setCooldown(60)
+    } else {
+      setSent(true)
+    }
   }
 
   return (

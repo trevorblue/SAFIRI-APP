@@ -270,11 +270,13 @@ export async function syncMemberAction(action, tripId) {
     if (error) console.error('syncMember INSERT:', error)
   } else if (type === 'UPDATE_MEMBER') {
     const { id, ...rest } = payload
-    const { error } = await supabase.from('trip_members').update({
-      name:      rest.name,
-      confirmed: rest.status === 'confirmed',
-      budget:    rest.budget ?? null,
-    }).eq('id', id)
+    const updates = {}
+    if (rest.name   !== undefined) updates.name      = rest.name
+    if (rest.status !== undefined) updates.confirmed = rest.status === 'confirmed'
+    if (rest.budget !== undefined) updates.budget    = rest.budget ?? null
+    if (rest.role   !== undefined) updates.role      = rest.role
+    if (Object.keys(updates).length === 0) return
+    const { error } = await supabase.from('trip_members').update(updates).eq('id', id)
     if (error) console.error('syncMember UPDATE:', error)
   } else if (type === 'REMOVE_MEMBER') {
     const { error } = await supabase.from('trip_members').delete().eq('id', payload)
