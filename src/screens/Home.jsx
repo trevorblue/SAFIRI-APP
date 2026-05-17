@@ -6,9 +6,20 @@ import { useTrip } from '../context/TripContext'
 import { formatKES } from '../lib/constants'
 import { SettingsIcon, CloseIcon, LogOutIcon } from '../components/icons'
 import { fetchAllUserTrips, fetchTripMemberNames } from '../lib/db'
+import { getQueueLength } from '../lib/offlineQueue'
+
+function formatKESCompact(amount) {
+  if (amount >= 1_000_000) return `KES ${(amount / 1_000_000).toFixed(1)}M`
+  if (amount >= 1_000) return `KES ${Math.round(amount / 1_000)}k`
+  return formatKES(amount)
+}
 
 function SettingsSheet({ onClose }) {
   const { user, signOut } = useAuth()
+  const [alertsMuted, setAlertsMuted] = useState(
+    () => localStorage.getItem('safiri_alerts_muted') === 'true'
+  )
+  const pendingCount = getQueueLength()
 
   return (
     <>
@@ -42,7 +53,8 @@ function SettingsSheet({ onClose }) {
           </motion.button>
         </div>
 
-        <div className="py-3">
+        <div className="py-3 overflow-y-auto max-h-[75vh]">
+          {/* Account */}
           <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Account</p>
           <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl px-4 py-3 mb-3">
             <div className="flex items-center gap-3">
@@ -56,6 +68,7 @@ function SettingsSheet({ onClose }) {
             </div>
           </div>
 
+          {/* App */}
           <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">App</p>
           <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl divide-y divide-[var(--color-border)] mb-3 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3">
@@ -63,11 +76,76 @@ function SettingsSheet({ onClose }) {
               <span className="text-[var(--color-muted)] text-sm">KES</span>
             </div>
             <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[var(--color-text)] text-sm">Appearance</span>
+              <span className="text-[var(--color-muted)] text-sm">Dark</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[var(--color-text)] text-sm">Data storage</span>
+              <span className="text-[var(--color-muted)] text-sm">Local + cloud</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
               <span className="text-[var(--color-text)] text-sm">Version</span>
               <span className="text-[var(--color-muted)] text-sm">1.0.0</span>
             </div>
           </div>
 
+          {/* Notifications */}
+          <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Notifications</p>
+          <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl divide-y divide-[var(--color-border)] mb-3 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-[var(--color-text)] text-sm">Budget alerts</p>
+                <p className="text-[var(--color-muted)] text-[11px]">Banner at 75% and 90% spent</p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !alertsMuted
+                  setAlertsMuted(next)
+                  localStorage.setItem('safiri_alerts_muted', String(next))
+                }}
+                className="shrink-0 relative w-11 h-6 rounded-full transition-colors"
+                style={{ backgroundColor: alertsMuted ? 'var(--color-surface-3)' : 'var(--color-primary)' }}
+              >
+                <span
+                  className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                  style={{ left: alertsMuted ? '2px' : '22px' }}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Pending sync — only shown when queue is non-empty */}
+          {pendingCount > 0 && (
+            <>
+              <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Sync</p>
+              <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl px-4 py-3 mb-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[var(--color-text)] text-sm">
+                    {pendingCount} action{pendingCount !== 1 ? 's' : ''} queued
+                  </p>
+                  <span className="text-[var(--color-warning)] text-[11px] font-medium">Offline</span>
+                </div>
+                <p className="text-[var(--color-muted)] text-[11px] mt-0.5">
+                  Will sync automatically when back online
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* Help */}
+          <p className="px-5 py-2 text-[var(--color-muted)] text-[10px] uppercase tracking-widest font-semibold">Help</p>
+          <div className="mx-4 bg-[var(--color-surface-2)] rounded-2xl divide-y divide-[var(--color-border)] mb-3 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[var(--color-text)] text-sm">Tip: tour</span>
+              <span className="text-[var(--color-muted)] text-xs">More → Show tour</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-[var(--color-text)] text-sm">Share trip link</span>
+              <span className="text-[var(--color-muted)] text-xs">More → Share group view</span>
+            </div>
+          </div>
+
+          {/* Sign out */}
           <div className="px-4 pt-1">
             <motion.button
               onClick={async () => { onClose(); await signOut() }}
@@ -244,6 +322,35 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
     })
   }
 
+  // Countdown helpers
+  const d = computed.daysToTrip
+
+  function CountdownBadge() {
+    if (d > 0) return (
+      <div className="inline-flex items-center gap-1.5 bg-[var(--color-primary-dim)] text-[var(--color-primary)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
+        <span>🗓</span>
+        <span>{d} day{d !== 1 ? 's' : ''} to {trip.destination?.split(',')[0] || 'trip'}</span>
+      </div>
+    )
+    if (d === 0) return (
+      <div className="inline-flex items-center gap-1.5 bg-[var(--color-success-dim)] text-[var(--color-success)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
+        <span>🎉</span>
+        <span>Trip starts today!</span>
+      </div>
+    )
+    if (computed.tripDaysRemaining > 0) return (
+      <div className="inline-flex items-center gap-1.5 bg-[var(--color-warning-dim)] text-[var(--color-warning)] px-3 py-1.5 rounded-full text-sm font-semibold mb-3">
+        <span>✈️</span>
+        <span>In progress · {computed.tripDaysRemaining} day{computed.tripDaysRemaining !== 1 ? 's' : ''} left</span>
+      </div>
+    )
+    return null
+  }
+
+  const checklistDone  = (state.checklist ?? []).filter(i => i.done).length
+  const checklistTotal = (state.checklist ?? []).length
+  const checklistPct   = checklistTotal > 0 ? checklistDone / checklistTotal : 0
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -280,6 +387,7 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
             animate={{ opacity: 1, y: 0 }}
             className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-5 mb-4"
           >
+            {/* Trip name / destination / dates */}
             <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="text-[var(--color-primary)] text-xs font-semibold uppercase tracking-widest mb-0.5">
@@ -297,6 +405,56 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
               </span>
             </div>
 
+            {/* Countdown badge */}
+            <CountdownBadge />
+
+            {/* Member avatars + group readiness */}
+            {computed.confirmedMembers.length > 0 && (
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="flex items-center">
+                  {computed.confirmedMembers.slice(0, 5).map((m, i) => (
+                    <span
+                      key={m.id}
+                      className="w-7 h-7 rounded-full bg-[var(--color-primary-dim)] text-[var(--color-primary)] text-[11px] font-bold flex items-center justify-center border-2 border-[var(--color-surface)]"
+                      style={{ marginLeft: i === 0 ? 0 : '-6px' }}
+                    >
+                      {m.name[0].toUpperCase()}
+                    </span>
+                  ))}
+                  {computed.confirmedMembers.length > 5 && (
+                    <span
+                      className="w-7 h-7 rounded-full bg-[var(--color-surface-3)] text-[var(--color-muted)] text-[10px] font-bold flex items-center justify-center border-2 border-[var(--color-surface)]"
+                      style={{ marginLeft: '-6px' }}
+                    >
+                      +{computed.confirmedMembers.length - 5}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[var(--color-muted)] text-xs leading-tight">
+                  {computed.confirmedMembers.length} confirmed · {formatKESCompact(computed.totalBudget)} committed
+                </span>
+              </div>
+            )}
+
+            {/* Checklist progress */}
+            {checklistTotal > 0 && (
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1 h-1.5 bg-[var(--color-surface-3)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${checklistPct * 100}%`,
+                      backgroundColor: checklistPct >= 1 ? 'var(--color-success)' : 'var(--color-primary)',
+                    }}
+                  />
+                </div>
+                <span className="text-[var(--color-muted)] text-xs whitespace-nowrap shrink-0">
+                  {checklistDone}/{checklistTotal} tasks
+                </span>
+              </div>
+            )}
+
+            {/* Spend bar */}
             <div className="mb-4">
               <div className="flex justify-between text-xs mb-1.5">
                 <span className="text-[var(--color-muted)]">{formatKES(computed.totalSpent)} spent</span>
@@ -317,10 +475,7 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--color-muted)] text-xs">
-                {computed.confirmedMembers.length} member{computed.confirmedMembers.length !== 1 ? 's' : ''}
-              </span>
+            <div className="flex items-center justify-end">
               <motion.button
                 onClick={onEnterTrip}
                 whileTap={{ scale: 0.95 }}

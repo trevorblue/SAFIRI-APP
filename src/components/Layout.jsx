@@ -23,6 +23,7 @@ export default function Layout({ onExitTrip, onCompleteTrip }) {
   const [showTutorial, setShowTutorial] = useState(() => !hasTutorialBeenSeen())
   const navigate = useNavigate()
   const location = useLocation()
+  const alertsMuted = localStorage.getItem('safiri_alerts_muted') === 'true'
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg)]">
@@ -44,7 +45,7 @@ export default function Layout({ onExitTrip, onCompleteTrip }) {
 
       {/* Alert banner */}
       <AnimatePresence>
-        {computed.alertLevel && (
+        {computed.alertLevel && !alertsMuted && (
           <motion.div
             key="alert"
             initial={{ y: -40, opacity: 0 }}
