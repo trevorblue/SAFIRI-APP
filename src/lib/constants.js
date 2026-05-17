@@ -224,16 +224,14 @@ export const ACTIVITY_LIBRARY = [
 ]
 
 export const EXPENSE_CATEGORIES = [
-  { id: 'activities', label: 'Activities', icon: '🎯' },
-  { id: 'transport', label: 'Transport', icon: '🚌' },
-  { id: 'food', label: 'Food', icon: '🍽️' },
-  { id: 'drinks', label: 'Drinks', icon: '🍺' },
-  { id: 'accommodation', label: 'Accommodation', icon: '🏨' },
-  { id: 'shopping', label: 'Shopping', icon: '🛍️' },
-  { id: 'tips', label: 'Tips', icon: '💰' },
-  { id: 'photography', label: 'Photography', icon: '📸' },
-  { id: 'data', label: 'Data / Airtime', icon: '📱' },
-  { id: 'other', label: 'Other', icon: '📌' },
+  { id: 'transport',     label: 'Transport / Fuel',    icon: '🚗' },
+  { id: 'accommodation', label: 'Accommodation',        icon: '🏨' },
+  { id: 'food',          label: 'Food & Choma',         icon: '🍖' },
+  { id: 'drinks',        label: 'Drinks & Liquor',      icon: '🍺' },
+  { id: 'park',          label: 'Park / Entry Fees',    icon: '🎫' },
+  { id: 'activities',    label: 'Activities',            icon: '🎯' },
+  { id: 'shopping',      label: 'Shopping',             icon: '🛍️' },
+  { id: 'other',         label: 'Miscellaneous / Tips', icon: '📌' },
 ]
 
 export const PAYMENT_METHODS = [

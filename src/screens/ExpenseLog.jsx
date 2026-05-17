@@ -12,15 +12,14 @@ const DAYS_FULL = ['sunday','monday','tuesday','wednesday','thursday','friday','
 const DAYS_ABBR = ['sun','mon','tue','wed','thu','fri','sat']
 
 const CATEGORY_KW = {
-  food:          ['nyama','choma','ugali','lunch','dinner','breakfast','meal','restaurant','chips','pilau','biryani','seafood','fish','pizza','mkate'],
-  drinks:        ['beer','wine','cocktail','juice','tusker','whisky','vodka','bar','pombe','drink','soda'],
-  transport:     ['uber','taxi','sgr','matatu','boda','ferry','fuel','parking','bolt','tuk','transport'],
-  activities:    ['entry','ticket','fort','camel','jet ski','waterpark','park','aws','karting','cruise','dhow','splash','activity'],
-  accommodation: ['hotel','airbnb','room','accommodation','lodge'],
-  shopping:      ['shopping','souvenir','kanga','kikoi'],
-  photography:   ['photo','photography','pics','selfie','photographer'],
-  tips:          ['tip','tips','kitu kidogo'],
-  data:          ['data','airtime','safaricom'],
+  food:          ['nyama','choma','ugali','lunch','dinner','breakfast','meal','restaurant','chips','pilau','biryani','seafood','fish','pizza','mkate','mandazi','kuku'],
+  drinks:        ['beer','wine','cocktail','juice','tusker','whisky','vodka','bar','pombe','drink','soda','liquor','spirits','quencher'],
+  transport:     ['uber','taxi','sgr','matatu','boda','ferry','fuel','petrol','parking','bolt','tuk','transport','fare','bus','shuttle'],
+  park:          ['park','conservation','gate','reserve','tsavo','maasai','mara','nakuru','naivasha','amboseli','aberdare'],
+  activities:    ['camel','jet ski','waterpark','karting','cruise','dhow','splash','activity','snorkel','hike','safari','game drive','fort','museum','entry','ticket','aws'],
+  accommodation: ['hotel','airbnb','room','accommodation','lodge','hostel','resort','bnb','checkin'],
+  shopping:      ['shopping','souvenir','kanga','kikoi','market','biashara','mall'],
+  other:         ['tip','kitu kidogo','photo','data','airtime','safaricom','sim'],
 }
 
 function parseQuickEntry(raw, members, _tripStartDate) {
