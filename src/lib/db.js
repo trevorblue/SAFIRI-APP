@@ -238,6 +238,22 @@ export async function fetchTripMemberNames(tripId) {
   return (data ?? []).map(m => m.name)
 }
 
+// ── Invite join (no auth required — calls SECURITY DEFINER RPCs) ─────────────
+
+export async function fetchTripForJoin(tripId) {
+  if (!supabase) return null
+  const { data, error } = await supabase.rpc('trip_preview', { p_trip_id: tripId })
+  if (error || !data || data.error) return null
+  return data
+}
+
+export async function joinTripById(tripId, name) {
+  if (!supabase) return { error: 'Unavailable' }
+  const { data, error } = await supabase.rpc('join_trip', { p_trip_id: tripId, p_name: name })
+  if (error) return { error: error.message }
+  return data
+}
+
 export async function syncMemberAction(action, tripId) {
   if (!supabase || !tripId) return
   const { type, payload } = action

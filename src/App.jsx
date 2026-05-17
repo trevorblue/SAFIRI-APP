@@ -20,6 +20,7 @@ import SettleUp from './screens/SettleUp'
 import Checklist from './screens/Checklist'
 import DocumentVault from './screens/DocumentVault'
 import ShareView from './screens/ShareView'
+import JoinTrip from './screens/JoinTrip'
 
 // Visiting /?seed=1 loads demo data and reloads the app — works from any state
 if (new URLSearchParams(window.location.search).get('seed') === '1') {
@@ -51,6 +52,10 @@ function AppRoutes({ onExitTrip }) {
 
 function AppShell() {
   const [splashDone, setSplashDone] = useState(false)
+  const [joinId, setJoinId] = useState(() => {
+    const p = new URLSearchParams(window.location.search).get('join')
+    return p || null
+  })
   // 'home' | 'onboarding' | 'trip'
   const [view, setView] = useState('home')
   const [prefillData, setPrefillData] = useState(null)
@@ -92,6 +97,8 @@ function AppShell() {
       {/* Keep splash visible until animation ends AND auth has resolved */}
       {(!splashDone || session === undefined) ? (
         <Splash key="splash" onDone={() => setSplashDone(true)} />
+      ) : joinId ? (
+        <JoinTrip key="join" tripId={joinId} onDone={() => setJoinId(null)} />
       ) : session === null ? (
         <Login key="login" />
       ) : view === 'onboarding' ? (

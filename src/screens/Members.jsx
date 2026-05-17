@@ -6,6 +6,16 @@ import { useTrip } from '../context/TripContext'
 import { formatKES } from '../lib/constants'
 import { CloseIcon, WalletIcon } from '../components/icons'
 
+function fmtRange(start, end) {
+  try {
+    const s = format(new Date(start), 'd MMM')
+    const e = end ? format(new Date(end), 'd MMM yyyy') : ''
+    return e ? `${s} – ${e}` : s
+  } catch {
+    return ''
+  }
+}
+
 const STATUS_META = {
   confirmed: { bg: 'bg-[var(--color-success-dim)]', text: 'text-[var(--color-success)]', label: 'Confirmed' },
   maybe:     { bg: 'bg-[var(--color-warning-dim)]', text: 'text-[var(--color-warning)]',  label: 'Maybe'     },
@@ -25,6 +35,7 @@ export default function Members() {
   const { state, dispatch, computed } = useTrip()
   const [searchParams] = useSearchParams()
   const [showAdd,      setShowAdd]      = useState(searchParams.get('add') === 'true')
+  const [showInvite,   setShowInvite]   = useState(false)
   const [contribMember, setContribMember] = useState(null)
 
   const { members, trip, expenses, contributions } = state
@@ -293,6 +304,19 @@ export default function Members() {
           </motion.div>
         )}
 
+        {/* Invite via WhatsApp */}
+        {state.tripDbId && (
+          <motion.button
+            onClick={() => setShowInvite(true)}
+            className="w-full py-3.5 rounded-2xl border border-[#25D366]/40 bg-[#25D366]/8 text-[#25D366] text-sm font-medium flex items-center justify-center gap-2 mt-1"
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          >
+            <span className="text-base">📲</span>
+            Share invite link
+          </motion.button>
+        )}
+
         {/* Add member button */}
         <motion.button
           data-tour="members-add"
@@ -313,6 +337,13 @@ export default function Members() {
             onClose={() => setShowAdd(false)}
           />
         )}
+        {showInvite && (
+          <InviteSheet
+            trip={trip}
+            tripDbId={state.tripDbId}
+            onClose={() => setShowInvite(false)}
+          />
+        )}
         {contribMember && (
           <ContributionSheet
             member={contribMember}
@@ -321,6 +352,93 @@ export default function Members() {
         )}
       </AnimatePresence>
     </motion.div>
+  )
+}
+
+// ─── Invite Sheet ─────────────────────────────────────────────────────────────
+
+function InviteSheet({ trip, tripDbId, onClose }) {
+  const [copied, setCopied] = useState(false)
+
+  const inviteUrl = `${window.location.origin}/?join=${tripDbId}`
+  const dateRange = fmtRange(trip.startDate, trip.endDate)
+  const waText    = encodeURIComponent(
+    `Hey! We're going to ${trip.destination || trip.name} 🇰🇪\n` +
+    (dateRange ? `📅 ${dateRange}\n` : '') +
+    `💰 Budget: KES ${Number(trip.budgetPerPerson).toLocaleString()} per person\n\n` +
+    `Track group expenses on Safiri:\n${inviteUrl}`
+  )
+  const waLink = `https://wa.me/?text=${waText}`
+
+  function copyLink() {
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <>
+      <motion.div
+        className="fixed inset-0 z-50 bg-black/50"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-[var(--color-surface)] rounded-t-3xl border-t border-[var(--color-border)] z-50 pb-[env(safe-area-inset-bottom,24px)]"
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+      >
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-[var(--color-border-strong)]" />
+        </div>
+        <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-[var(--color-border)]">
+          <div>
+            <span className="font-semibold text-[var(--color-text)]">Invite to trip</span>
+            <p className="text-[var(--color-muted)] text-xs mt-0.5">
+              Anyone with this link can join {trip.name}
+            </p>
+          </div>
+          <motion.button onClick={onClose} className="text-[var(--color-muted)] p-1"
+            whileTap={{ scale: 0.85, rotate: 90 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
+            <CloseIcon size={20} stroke="currentColor" />
+          </motion.button>
+        </div>
+
+        <div className="px-5 py-5 space-y-3">
+          {/* Link preview */}
+          <div className="bg-[var(--color-surface-2)] rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            <p className="text-[var(--color-muted)] text-xs truncate flex-1 font-mono">{inviteUrl}</p>
+            <motion.button
+              onClick={copyLink}
+              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-xl"
+              style={{
+                backgroundColor: copied ? 'var(--color-success-dim)' : 'var(--color-primary-dim)',
+                color:           copied ? 'var(--color-success)'     : 'var(--color-primary)',
+              }}
+              whileTap={{ scale: 0.9 }}
+            >
+              {copied ? '✓ Copied' : 'Copy'}
+            </motion.button>
+          </div>
+
+          {/* WhatsApp CTA */}
+          <a
+            href={waLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-[#25D366] text-white font-semibold text-base"
+          >
+            <span className="text-xl">📲</span>
+            Send via WhatsApp
+          </a>
+
+          <p className="text-[var(--color-muted)] text-[11px] text-center px-4">
+            Recipient taps the link, enters their name, and gets added instantly — no account needed.
+          </p>
+        </div>
+      </motion.div>
+    </>
   )
 }
 
