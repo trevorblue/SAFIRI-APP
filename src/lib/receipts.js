@@ -8,17 +8,22 @@ export async function uploadReceipt(file, expenseId, tripId) {
   const path = `${tripId}/${expenseId}.${ext}`
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true })
   if (error) { console.error('uploadReceipt:', error); return null }
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-  return data.publicUrl ?? null
+  return path  // store path, not a public URL
 }
 
-export async function deleteReceipt(receiptUrl) {
-  if (!supabase || !receiptUrl) return
-  try {
-    const url  = new URL(receiptUrl)
-    const path = url.pathname.split(`/${BUCKET}/`)[1]
-    if (path) await supabase.storage.from(BUCKET).remove([path])
-  } catch {
-    // ignore — URL may already be invalid
-  }
+export async function getReceiptSignedUrl(pathOrUrl, expiresIn = 3600) {
+  if (!supabase || !pathOrUrl) return null
+  // Handle legacy full URLs stored before this change
+  if (pathOrUrl.startsWith('http')) return pathOrUrl
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(pathOrUrl, expiresIn)
+  if (error) { console.error('getReceiptSignedUrl:', error); return null }
+  return data.signedUrl
+}
+
+export async function deleteReceipt(pathOrUrl) {
+  if (!supabase || !pathOrUrl) return
+  const path = pathOrUrl.startsWith('http')
+    ? (() => { try { return new URL(pathOrUrl).pathname.split(`/${BUCKET}/`)[1] } catch { return null } })()
+    : pathOrUrl
+  if (path) await supabase.storage.from(BUCKET).remove([path])
 }

@@ -1,11 +1,11 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, subDays, isToday, isYesterday } from 'date-fns'
 import { useTrip } from '../context/TripContext'
 import { formatKES, EXPENSE_CATEGORIES, PAYMENT_METHODS } from '../lib/constants'
 import { CloseIcon, DownloadIcon } from '../components/icons'
 import { parseExpenseWithClaude, hasClaudeKey } from '../lib/claude'
-import { uploadReceipt, deleteReceipt } from '../lib/receipts'
+import { uploadReceipt, deleteReceipt, getReceiptSignedUrl } from '../lib/receipts'
 import MpesaImportSheet from '../components/MpesaImportSheet'
 
 function exportCSV(expenses, members, tripName) {
@@ -142,6 +142,16 @@ export default function ExpenseLog() {
   const [sheet, setSheet]         = useState(null)
   const [parsing, setParsing]     = useState(false)
   const [showMpesa, setShowMpesa] = useState(false)
+  const [signedUrls, setSignedUrls] = useState({})
+
+  useEffect(() => {
+    state.expenses.forEach(async (e) => {
+      if (!e.receiptUrl || signedUrls[e.id]) return
+      const url = await getReceiptSignedUrl(e.receiptUrl)
+      if (url) setSignedUrls(prev => ({ ...prev, [e.id]: url }))
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.expenses])
 
   const confirmedMembers = state.members.filter(m => m.status === 'confirmed')
   const approved   = useMemo(() => state.expenses.filter(e => e.status !== 'pending'), [state.expenses])
@@ -404,9 +414,9 @@ export default function ExpenseLog() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {expense.receiptUrl && (
+                          {expense.receiptUrl && signedUrls[expense.id] && (
                             <img
-                              src={expense.receiptUrl}
+                              src={signedUrls[expense.id]}
                               alt="receipt"
                               className="w-8 h-8 rounded-lg object-cover border border-[var(--color-border)] shrink-0"
                             />
@@ -431,6 +441,7 @@ export default function ExpenseLog() {
             expenseId={sheet.expenseId}
             tripStartDate={state.trip.startDate}
             members={confirmedMembers}
+            existingReceiptUrl={signedUrls[sheet.expenseId]}
             onSave={handleSave}
             onDelete={handleDelete}
             onClose={() => setSheet(null)}
@@ -453,7 +464,7 @@ export default function ExpenseLog() {
 
 // ─── Add Expense Sheet ────────────────────────────────────────────────────────
 
-function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, onDelete, onClose }) {
+function AddExpenseSheet({ initial, expenseId, tripStartDate, members, existingReceiptUrl, onSave, onDelete, onClose }) {
   const photoRef = useRef(null)
   const [form, setForm] = useState({
     description:   initial?.description   ?? '',
@@ -802,7 +813,7 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
             {form.receiptPreview || form.receiptUrl ? (
               <div className="flex items-center gap-3">
                 <img
-                  src={form.receiptPreview ?? form.receiptUrl}
+                  src={form.receiptPreview ?? existingReceiptUrl}
                   alt="receipt preview"
                   className="w-16 h-16 rounded-xl object-cover border border-[var(--color-border)]"
                 />
