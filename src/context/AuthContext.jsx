@@ -22,11 +22,21 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function signIn(email) {
+  async function signInWithPassword(email, password) {
     if (!supabase) return { error: new Error('Supabase not configured') }
-    return supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
+    return supabase.auth.signInWithPassword({ email, password })
+  }
+
+  async function signUpWithPassword(email, password) {
+    if (!supabase) return { error: new Error('Supabase not configured') }
+    return supabase.auth.signUp({ email, password })
+  }
+
+  async function signInWithGoogle() {
+    if (!supabase) return { error: new Error('Supabase not configured') }
+    return supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
     })
   }
 
@@ -35,7 +45,14 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, signIn, signOut }}>
+    <AuthContext.Provider value={{
+      session,
+      user: session?.user ?? null,
+      signInWithPassword,
+      signUpWithPassword,
+      signInWithGoogle,
+      signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   )
