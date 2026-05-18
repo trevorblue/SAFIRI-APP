@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
-import { fetchTripForJoin, joinTripById } from '../lib/db'
+import { fetchTripForJoin, joinTripById, setJoinMemberBudget } from '../lib/db'
 
 function fmtRange(start, end) {
   try {
@@ -16,9 +16,10 @@ function fmtRange(start, end) {
 export default function JoinTrip({ tripId, onDone }) {
   const [trip, setTrip]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [name, setName]       = useState('')
-  const [joining, setJoining] = useState(false)
-  const [result, setResult]     = useState(null) // { tripName, destination } on success
+  const [name, setName]         = useState('')
+  const [budget, setBudget]     = useState('')
+  const [joining, setJoining]   = useState(false)
+  const [result, setResult]     = useState(null) // { memberId, tripName, destination } on success
   const [err, setErr]           = useState(null)
   const [declined, setDeclined] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
@@ -34,13 +35,22 @@ export default function JoinTrip({ tripId, onDone }) {
     if (!name.trim() || joining) return
     setJoining(true)
     const res = await joinTripById(tripId, name.trim())
-    setJoining(false)
     if (res?.error) {
+      setJoining(false)
       setErr(res.error)
-    } else {
-      setResult(res)
+      return
     }
+    const parsedBudget = Number(budget)
+    if (res?.memberId && parsedBudget > 0) {
+      await setJoinMemberBudget(res.memberId, parsedBudget)
+    }
+    setJoining(false)
+    setResult(res)
   }
+
+  const floor       = trip?.budgetPerPerson ? Number(trip.budgetPerPerson) : 0
+  const budgetNum   = Number(budget)
+  const belowFloor  = budget !== '' && budgetNum > 0 && floor > 0 && budgetNum < floor
 
   function waMessage() {
     const dest = result?.destination || result?.tripName || 'the trip'
@@ -243,6 +253,33 @@ export default function JoinTrip({ tripId, onDone }) {
                   className="input-field text-lg"
                   autoFocus
                 />
+              </div>
+
+              {/* Budget input */}
+              <div className="mb-4">
+                <label className="text-[var(--color-muted-2)] text-xs font-medium uppercase tracking-wide mb-2 block">
+                  Your budget (KES) <span className="normal-case font-normal text-[var(--color-muted)]">— optional</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-muted)] text-sm pointer-events-none">KES</span>
+                  <input
+                    type="number"
+                    value={budget}
+                    onChange={e => setBudget(e.target.value)}
+                    placeholder={floor > 0 ? floor.toLocaleString() : '0'}
+                    className="input-field pl-14"
+                    inputMode="numeric"
+                  />
+                </div>
+                {belowFloor ? (
+                  <p className="text-[var(--color-warning)] text-[11px] mt-1.5 px-1">
+                    ⚡ Below the group target of KES {floor.toLocaleString()} — the organiser will be notified
+                  </p>
+                ) : floor > 0 && (
+                  <p className="text-[var(--color-muted)] text-[11px] mt-1.5 px-1">
+                    Group target: KES {floor.toLocaleString()} per person
+                  </p>
+                )}
               </div>
 
               {err && (

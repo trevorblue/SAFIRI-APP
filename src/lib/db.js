@@ -17,6 +17,7 @@ export function expToLocal(e) {
     paymentMethod: e.payment_method ?? null,
     paymentSource: e.payment_source ?? 'personal',
     status:        e.status ?? 'approved',
+    receiptUrl:    e.receipt_url ?? null,
     createdAt:     e.created_at,
   }
 }
@@ -158,22 +159,24 @@ export async function syncExpenseAction(action, tripId) {
       payment_method: payload.paymentMethod ?? null,
       payment_source: payload.paymentSource ?? 'personal',
       status:         payload.status        ?? 'approved',
+      receipt_url:    payload.receiptUrl    ?? null,
     })
     if (error) console.error('syncExpense INSERT:', error)
   } else if (type === 'UPDATE_EXPENSE') {
     const { id, ...rest } = payload
     const { error } = await supabase.from('expenses').update({
-      description:   rest.description,
-      amount:        rest.amount,
-      category:      rest.category,
-      date:          rest.date,
-      paid_by:       rest.paidBy       ?? null,
-      split_between: rest.splitBetween ?? [],
-      split_mode:    rest.splitMode    ?? 'equal',
-      custom_splits: rest.customSplits ?? null,
-      is_pre_trip:    rest.isPreTrip    ?? false,
+      description:    rest.description,
+      amount:         rest.amount,
+      category:       rest.category,
+      date:           rest.date,
+      paid_by:        rest.paidBy        ?? null,
+      split_between:  rest.splitBetween  ?? [],
+      split_mode:     rest.splitMode     ?? 'equal',
+      custom_splits:  rest.customSplits  ?? null,
+      is_pre_trip:    rest.isPreTrip     ?? false,
       payment_source: rest.paymentSource ?? 'personal',
       status:         rest.status,
+      receipt_url:    rest.receiptUrl    ?? null,
     }).eq('id', id)
     if (error) console.error('syncExpense UPDATE:', error)
   } else if (type === 'DELETE_EXPENSE') {
@@ -252,6 +255,15 @@ export async function joinTripById(tripId, name) {
   const { data, error } = await supabase.rpc('join_trip', { p_trip_id: tripId, p_name: name })
   if (error) return { error: error.message }
   return data
+}
+
+export async function setJoinMemberBudget(memberId, budget) {
+  if (!supabase || !memberId || !budget) return
+  const { error } = await supabase.rpc('set_member_budget', {
+    p_member_id: memberId,
+    p_budget:    budget,
+  })
+  if (error) console.error('setJoinMemberBudget:', error)
 }
 
 export async function syncMemberAction(action, tripId) {

@@ -20,6 +20,7 @@ import {
   memberToLocal,
 } from '../lib/db'
 import { enqueueAction, flushQueue } from '../lib/offlineQueue'
+import { triggerBudgetPush } from '../lib/pushNotifications'
 
 const STORAGE_KEY = 'safiri_v1'
 
@@ -464,6 +465,25 @@ export function TripProvider({ children }) {
       pendingCount: pendingExpenses.length,
     }
   }, [state])
+
+  // Fire push when budget first crosses 75% or 90%
+  const prevAlertRef = useRef(null)
+  useEffect(() => {
+    const current  = computed.alertLevel
+    const previous = prevAlertRef.current
+    prevAlertRef.current = current
+
+    if (!current || current === previous || !state.tripDbId) return
+
+    const title = current === 'danger'
+      ? `⚠️ ${state.trip.name} — over 90% spent!`
+      : `⚡ ${state.trip.name} — 75% of budget used`
+    const body = current === 'danger'
+      ? `Only KES ${Math.round(computed.totalRemaining).toLocaleString()} remaining. Review spending now.`
+      : `Time to review your group spending.`
+
+    triggerBudgetPush(state.tripDbId, title, body)
+  }, [computed.alertLevel, computed.totalRemaining, state.tripDbId, state.trip.name])
 
   return (
     <TripContext.Provider value={{ state, dispatch: safeDispatch, computed }}>

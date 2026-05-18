@@ -1,10 +1,12 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, parseISO, subDays, isToday, isYesterday } from 'date-fns'
 import { useTrip } from '../context/TripContext'
 import { formatKES, EXPENSE_CATEGORIES, PAYMENT_METHODS } from '../lib/constants'
 import { CloseIcon, DownloadIcon } from '../components/icons'
 import { parseExpenseWithClaude, hasClaudeKey } from '../lib/claude'
+import { uploadReceipt, deleteReceipt } from '../lib/receipts'
+import MpesaImportSheet from '../components/MpesaImportSheet'
 
 function exportCSV(expenses, members, tripName) {
   const memberMap = Object.fromEntries(members.map(m => [m.id, m.name]))
@@ -136,9 +138,10 @@ const fadeUp  = { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, tr
 
 export default function ExpenseLog() {
   const { state, dispatch, computed } = useTrip()
-  const [quick, setQuick] = useState('')
-  const [sheet, setSheet] = useState(null)
-  const [parsing, setParsing] = useState(false)
+  const [quick, setQuick]         = useState('')
+  const [sheet, setSheet]         = useState(null)
+  const [parsing, setParsing]     = useState(false)
+  const [showMpesa, setShowMpesa] = useState(false)
 
   const confirmedMembers = state.members.filter(m => m.status === 'confirmed')
   const approved   = useMemo(() => state.expenses.filter(e => e.status !== 'pending'), [state.expenses])
@@ -169,18 +172,43 @@ export default function ExpenseLog() {
     setQuick('')
   }, [quick, confirmedMembers, state.trip.startDate])
 
-  function handleSave(data) {
+  async function handleSave(data) {
+    const { receiptFile, ...rest } = data
+    let receiptUrl = rest.receiptUrl ?? null
+
+    if (receiptFile) {
+      const expId   = sheet.expenseId ?? crypto.randomUUID()
+      const tripId  = state.tripDbId
+      const uploaded = tripId ? await uploadReceipt(receiptFile, expId, tripId) : null
+      receiptUrl = uploaded ?? receiptUrl
+      if (sheet.expenseId) {
+        dispatch({ type: 'UPDATE_EXPENSE', payload: { id: sheet.expenseId, ...rest, receiptUrl } })
+      } else {
+        dispatch({ type: 'ADD_EXPENSE', payload: { id: expId, createdAt: new Date().toISOString(), ...rest, receiptUrl } })
+      }
+      setSheet(null)
+      return
+    }
+
     if (sheet.expenseId) {
-      dispatch({ type: 'UPDATE_EXPENSE', payload: { id: sheet.expenseId, ...data } })
+      dispatch({ type: 'UPDATE_EXPENSE', payload: { id: sheet.expenseId, ...rest, receiptUrl } })
     } else {
-      dispatch({ type: 'ADD_EXPENSE', payload: { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...data } })
+      dispatch({ type: 'ADD_EXPENSE', payload: { id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...rest, receiptUrl } })
     }
     setSheet(null)
   }
 
   function handleDelete(id) {
+    const expense = state.expenses.find(e => e.id === id)
+    if (expense?.receiptUrl) deleteReceipt(expense.receiptUrl)
     dispatch({ type: 'DELETE_EXPENSE', payload: id })
     setSheet(null)
+  }
+
+  function handleMpesaImport(transactions) {
+    for (const tx of transactions) {
+      dispatch({ type: 'ADD_EXPENSE', payload: tx })
+    }
   }
 
   return (
@@ -192,6 +220,14 @@ export default function ExpenseLog() {
         <div className="flex items-end justify-between">
           <h1 className="text-[var(--color-text)] text-3xl font-bold">Expenses</h1>
           <div className="flex items-end gap-3">
+            <motion.button
+              onClick={() => setShowMpesa(true)}
+              className="pb-1 text-[var(--color-muted)] text-xs font-semibold"
+              whileTap={{ scale: 0.85 }}
+              title="Import M-Pesa statement"
+            >
+              M-Pesa
+            </motion.button>
             {approved.length > 0 && (
               <motion.button
                 onClick={() => exportCSV(approved, confirmedMembers, state.trip.name)}
@@ -368,6 +404,13 @@ export default function ExpenseLog() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
+                          {expense.receiptUrl && (
+                            <img
+                              src={expense.receiptUrl}
+                              alt="receipt"
+                              className="w-8 h-8 rounded-lg object-cover border border-[var(--color-border)] shrink-0"
+                            />
+                          )}
                           <span className="text-[var(--color-text)] font-semibold text-sm tabular-nums">{formatKES(expense.amount)}</span>
                           <span className="text-[var(--color-muted)] text-base leading-none">›</span>
                         </div>
@@ -394,6 +437,16 @@ export default function ExpenseLog() {
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showMpesa && (
+          <MpesaImportSheet
+            members={confirmedMembers}
+            onImport={handleMpesaImport}
+            onClose={() => setShowMpesa(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
@@ -401,6 +454,7 @@ export default function ExpenseLog() {
 // ─── Add Expense Sheet ────────────────────────────────────────────────────────
 
 function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, onDelete, onClose }) {
+  const photoRef = useRef(null)
   const [form, setForm] = useState({
     description:   initial?.description   ?? '',
     amount:        initial?.amount        ?? '',
@@ -414,6 +468,9 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
     customSplits:  initial?.customSplits  ?? {},
     paymentSource: initial?.paymentSource ?? 'kitty',
     status:        initial?.status        ?? 'approved',
+    receiptUrl:    initial?.receiptUrl    ?? null,
+    receiptFile:   null,
+    receiptPreview: null,
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -725,6 +782,58 @@ function AddExpenseSheet({ initial, expenseId, tripStartDate, members, onSave, o
               )}
             </div>
           )}
+
+          {/* Receipt photo */}
+          <div>
+            <label className="text-[var(--color-muted-2)] text-xs font-medium uppercase tracking-wide mb-2 block">Receipt photo</label>
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const preview = URL.createObjectURL(file)
+                setForm(f => ({ ...f, receiptFile: file, receiptPreview: preview, receiptUrl: null }))
+              }}
+            />
+            {form.receiptPreview || form.receiptUrl ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={form.receiptPreview ?? form.receiptUrl}
+                  alt="receipt preview"
+                  className="w-16 h-16 rounded-xl object-cover border border-[var(--color-border)]"
+                />
+                <div className="flex flex-col gap-2">
+                  <motion.button
+                    onClick={() => photoRef.current?.click()}
+                    className="text-[var(--color-primary)] text-xs font-semibold"
+                    whileTap={{ scale: 0.92 }}
+                  >
+                    Replace
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setForm(f => ({ ...f, receiptFile: null, receiptPreview: null, receiptUrl: null }))}
+                    className="text-[var(--color-danger)] text-xs font-semibold"
+                    whileTap={{ scale: 0.92 }}
+                  >
+                    Remove
+                  </motion.button>
+                </div>
+              </div>
+            ) : (
+              <motion.button
+                onClick={() => photoRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-[var(--color-border-strong)] text-[var(--color-muted)] text-sm w-full"
+                whileTap={{ scale: 0.97 }}
+              >
+                <span className="text-lg">📷</span>
+                <span>Add receipt photo</span>
+              </motion.button>
+            )}
+          </div>
 
           {/* Pre-trip toggle */}
           <div className="flex items-center justify-between py-1">

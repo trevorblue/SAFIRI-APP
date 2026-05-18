@@ -7,6 +7,7 @@ import { formatKES } from '../lib/constants'
 import { SettingsIcon, CloseIcon, LogOutIcon } from '../components/icons'
 import { fetchAllUserTrips, fetchTripMemberNames } from '../lib/db'
 import { getQueueLength } from '../lib/offlineQueue'
+import { pushSupported, isPushSubscribed, subscribeToPush, unsubscribeFromPush } from '../lib/pushNotifications'
 
 function formatKESCompact(amount) {
   if (amount >= 1_000_000) return `KES ${(amount / 1_000_000).toFixed(1)}M`
@@ -29,6 +30,28 @@ function SettingsSheet({ onClose }) {
   )
   const [copied,           setCopied]           = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [pushOn,           setPushOn]           = useState(false)
+  const [pushBusy,         setPushBusy]         = useState(false)
+
+  useEffect(() => {
+    isPushSubscribed().then(setPushOn)
+  }, [])
+
+  async function togglePush() {
+    if (!pushSupported || pushBusy) return
+    setPushBusy(true)
+    try {
+      if (pushOn) {
+        await unsubscribeFromPush(user?.id)
+        setPushOn(false)
+      } else {
+        const ok = await subscribeToPush(user?.id, state.tripDbId)
+        setPushOn(!!ok)
+      }
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   function toggleTheme() {
     const next = theme === 'dark' ? 'light' : 'dark'
@@ -205,6 +228,28 @@ function SettingsSheet({ onClose }) {
                 />
               </button>
             </div>
+            {pushSupported && (
+              <div className="flex items-center justify-between px-4 py-3 gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[var(--color-text)] text-sm">Push notifications</p>
+                  <p className="text-[var(--color-muted)] text-[11px]">Trip reminders &amp; budget alerts</p>
+                </div>
+                <button
+                  onClick={togglePush}
+                  disabled={pushBusy}
+                  className="shrink-0 relative w-11 h-6 rounded-full transition-colors"
+                  style={{
+                    backgroundColor: pushOn ? 'var(--color-primary)' : 'var(--color-surface-3)',
+                    opacity: pushBusy ? 0.6 : 1,
+                  }}
+                >
+                  <span
+                    className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                    style={{ left: pushOn ? '22px' : '2px' }}
+                  />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ── Trip — export summary ── */}
