@@ -372,7 +372,7 @@ function SettingsSheet({ onClose }) {
   )
 }
 
-function PastTripCard({ trip, onClone, onUseGroup }) {
+function PastTripCard({ trip, onClone, onUseGroup, onViewDetail }) {
   const [action, setAction] = useState(null)
 
   const days = trip.startDate && trip.endDate
@@ -454,6 +454,15 @@ function PastTripCard({ trip, onClone, onUseGroup }) {
 
       <div className="flex gap-2 pt-1">
         <motion.button
+          onClick={() => onViewDetail(trip.id)}
+          disabled={!!action}
+          className="py-2.5 px-4 rounded-xl text-xs font-semibold border border-[var(--color-border)] text-[var(--color-text)] text-center transition-opacity shrink-0"
+          style={{ opacity: action ? 0.55 : 1 }}
+          whileTap={!action ? { scale: 0.95 } : {}}
+        >
+          View
+        </motion.button>
+        <motion.button
           onClick={doClone}
           disabled={!!action}
           className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-center transition-opacity"
@@ -476,7 +485,7 @@ function PastTripCard({ trip, onClone, onUseGroup }) {
   )
 }
 
-export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
+export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip, onViewHistory }) {
   const { user }                        = useAuth()
   const { state, computed }             = useTrip()
   const { trip, setupComplete }         = state
@@ -722,7 +731,7 @@ export default function Home({ onEnterTrip, onCreateTrip, onCloneTrip }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
               >
-                <PastTripCard trip={t} onClone={handleClone} onUseGroup={handleUseGroup} />
+                <PastTripCard trip={t} onClone={handleClone} onUseGroup={handleUseGroup} onViewDetail={onViewHistory} />
               </motion.div>
             ))
           )}

@@ -185,6 +185,61 @@ export async function syncExpenseAction(action, tripId) {
   }
 }
 
+// Save a budget threshold milestone (75% / 90%) into the trip's settings JSONB.
+// Idempotent — skips if the same level was already saved.
+export async function saveBudgetMilestone(tripId, level, totalSpent) {
+  if (!supabase || !tripId) return
+  const { data: trip } = await supabase.from('trips').select('settings').eq('id', tripId).single()
+  const s = trip?.settings ?? {}
+  const milestones = Array.isArray(s.budgetMilestones) ? s.budgetMilestones : []
+  if (milestones.some(m => m.level === level)) return
+  await supabase.from('trips').update({
+    settings: { ...s, budgetMilestones: [...milestones, { level, totalSpent, timestamp: new Date().toISOString() }] },
+  }).eq('id', tripId)
+}
+
+// Load a complete archived trip (members + expenses) for the history detail view
+export async function fetchArchivedTrip(tripId) {
+  if (!supabase) return null
+  const { data: trip, error } = await supabase.from('trips').select('*').eq('id', tripId).single()
+  if (error || !trip) return null
+
+  const [{ data: members }, { data: expenses }] = await Promise.all([
+    supabase.from('trip_members').select('*').eq('trip_id', trip.id).order('created_at'),
+    supabase.from('expenses').select('*').eq('trip_id', trip.id).order('created_at', { ascending: false }),
+  ])
+
+  const s = trip.settings ?? {}
+  return {
+    tripDbId: trip.id,
+    trip: {
+      name:             trip.name,
+      destination:      s.destination      ?? '',
+      startDate:        trip.start_date,
+      endDate:          trip.end_date,
+      budgetPerPerson:  Number(trip.budget_per_person),
+      transportMode:    s.transportMode    ?? 'car',
+      sgrCostPerPerson: Number(s.sgrCostPerPerson ?? 0),
+      carTotalCost:     Number(s.carTotalCost  ?? 0),
+      carType:          s.carType          ?? 'sedan',
+    },
+    groupSize:     Number(s.groupSize     ?? 1),
+    monthlyBudget: s.monthlyBudget        ?? null,
+    cashFloat:     Number(s.cashFloat     ?? 0),
+    categoryCaps:  s.categoryCaps         ?? {},
+    contributions: Array.isArray(s.contributions) ? s.contributions : [],
+    members:       (members  ?? []).map(memberToLocal),
+    expenses:      (expenses ?? []).map(expToLocal),
+    itinerary:     Array.isArray(s.archivedItinerary) ? s.archivedItinerary : [],
+    checklist:     Array.isArray(s.archivedChecklist) ? s.archivedChecklist : [],
+    docs:          Array.isArray(s.archivedDocs)      ? s.archivedDocs      : [],
+    budgetMilestones:    Array.isArray(s.budgetMilestones) ? s.budgetMilestones : [],
+    archivedTotalSpent:  s.archivedTotalSpent  ?? null,
+    archivedMemberCount: Number(s.archivedMemberCount ?? 0) || null,
+    archivedAt:          s.archivedAt          ?? null,
+  }
+}
+
 // Archive a trip — mark complete and snapshot spend totals into settings
 export async function archiveTrip(tripId, snapshot = {}) {
   if (!supabase || !tripId) return

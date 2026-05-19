@@ -27,6 +27,7 @@ import Checklist from './screens/Checklist'
 import DocumentVault from './screens/DocumentVault'
 import ShareView from './screens/ShareView'
 import JoinTrip from './screens/JoinTrip'
+import TripHistoryDetail from './screens/TripHistoryDetail'
 
 // Visiting /?seed=1 loads demo data and reloads the app — works from any state
 if (new URLSearchParams(window.location.search).get('seed') === '1') {
@@ -65,6 +66,7 @@ function AppShell() {
   // 'home' | 'onboarding' | 'trip'
   const [view, setView] = useState('home')
   const [prefillData, setPrefillData] = useState(null)
+  const [historyTripId, setHistoryTripId] = useState(null)
   const { session } = useAuth()
   const { state, dispatch, computed } = useTrip()
 
@@ -80,6 +82,9 @@ function AppShell() {
       archiveTrip(state.tripDbId, {
         archivedTotalSpent:  computed.totalSpent,
         archivedMemberCount: computed.confirmedMembers.length,
+        archivedItinerary:   state.itinerary ?? [],
+        archivedChecklist:   state.checklist ?? [],
+        archivedDocs:        state.docs      ?? [],
       })
     }
     dispatch({ type: 'RESET' })
@@ -103,6 +108,9 @@ function AppShell() {
       archiveTrip(state.tripDbId, {
         archivedTotalSpent:  computed.totalSpent,
         archivedMemberCount: computed.confirmedMembers.length,
+        archivedItinerary:   state.itinerary ?? [],
+        archivedChecklist:   state.checklist ?? [],
+        archivedDocs:        state.docs      ?? [],
       })
     }
     dispatch({ type: 'RESET' })
@@ -127,12 +135,19 @@ function AppShell() {
         />
       ) : view === 'trip' && state.setupComplete ? (
         <AppRoutes key="app" onExitTrip={() => setView('home')} onCompleteTrip={handleCompleteTrip} />
+      ) : historyTripId ? (
+        <TripHistoryDetail
+          key="history-detail"
+          tripId={historyTripId}
+          onBack={() => setHistoryTripId(null)}
+        />
       ) : (
         <Home
           key="home"
           onEnterTrip={() => setView('trip')}
           onCreateTrip={() => setView('onboarding')}
           onCloneTrip={handleCloneTrip}
+          onViewHistory={setHistoryTripId}
         />
       )}
     </AnimatePresence>

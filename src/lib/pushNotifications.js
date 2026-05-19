@@ -56,17 +56,8 @@ export async function unsubscribeFromPush(userId) {
   }
 }
 
-// Called from the budget alert logic — fires push to all subscriptions for a trip
+// Called from the budget alert logic — Edge Function fetches all subscriptions server-side
 export async function triggerBudgetPush(tripId, title, body) {
   if (!supabase) return
-  const { data: subs } = await supabase
-    .from('push_subscriptions')
-    .select('endpoint, keys')
-    .eq('trip_id', tripId)
-  if (!subs?.length) return
-  for (const sub of subs) {
-    supabase.functions.invoke('send_push', {
-      body: { endpoint: sub.endpoint, keys: sub.keys, title, body },
-    }).catch(() => {})
-  }
+  supabase.functions.invoke('send_push', { body: { tripId, title, body } }).catch(() => {})
 }

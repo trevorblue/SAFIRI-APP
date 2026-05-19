@@ -16,6 +16,7 @@ import {
   syncExpenseAction,
   syncMemberAction,
   syncTripSettings,
+  saveBudgetMilestone,
   expToLocal,
   memberToLocal,
 } from '../lib/db'
@@ -483,7 +484,8 @@ export function TripProvider({ children }) {
       : `Time to review your group spending.`
 
     triggerBudgetPush(state.tripDbId, title, body)
-  }, [computed.alertLevel, computed.totalRemaining, state.tripDbId, state.trip.name])
+    saveBudgetMilestone(state.tripDbId, current, Math.round(computed.totalSpent))
+  }, [computed.alertLevel, computed.totalRemaining, computed.totalSpent, state.tripDbId, state.trip.name])
 
   return (
     <TripContext.Provider value={{ state, dispatch: safeDispatch, computed }}>
